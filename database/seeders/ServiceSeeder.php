@@ -15,8 +15,29 @@ final class ServiceSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create 8 sample services
-        Service::factory()->count(8)->create();
+        // Define unique service names to prevent duplicates
+        // Each service will be created with a unique name from this list
+        $serviceNames = [
+            'General Consultation',
+            'Follow-up Visit',
+            'Lab Work',
+            'X-Ray',
+            'MRI Scan',
+            'Blood Test',
+            'Physical Examination',
+            'Vaccination',
+        ];
+
+        // Create each service uniquely to prevent duplicates
+        // Use firstOrCreate to ensure we don't create duplicates if seeder runs multiple times
+        foreach ($serviceNames as $serviceName) {
+            Service::firstOrCreate(
+                ['name' => $serviceName],
+                Service::factory()->make([
+                    'name' => $serviceName,
+                ])->toArray()
+            );
+        }
     }
 }
 
