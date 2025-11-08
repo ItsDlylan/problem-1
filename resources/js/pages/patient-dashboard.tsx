@@ -4,9 +4,7 @@ import { AppointmentCard } from "@/components/appointment-card";
 import { AppointmentFilters } from "@/components/appointment-filters";
 import { ChatbotPanel } from "@/components/chatbot-panel";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  mockAppointments,
   Appointment,
   AppointmentStatus,
 } from "@/types/appointment";
@@ -22,7 +20,11 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ];
 
-export default function Dashboard() {
+interface DashboardProps {
+  appointments: Appointment[];
+}
+
+export default function Dashboard({ appointments }: DashboardProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">(
@@ -30,11 +32,10 @@ export default function Dashboard() {
   );
   const [sortOption, setSortOption] = useState("datetime-desc");
   const [isChatbotOpen, setChatbotOpen] = useState(false);
-  const [isLoading, setLoading] = useState(true);
   const [jump, setJump] = useState(false);
 
   const filteredAppointments = useMemo(() => {
-    let appointments = mockAppointments.filter((appointment) => {
+    let filtered = appointments.filter((appointment) => {
       const term = debouncedSearchTerm.toLowerCase();
       return (
         appointment.doctorName.toLowerCase().includes(term) ||
@@ -44,14 +45,14 @@ export default function Dashboard() {
     });
 
     if (statusFilter !== "all") {
-      appointments = appointments.filter(
+      filtered = filtered.filter(
         (appointment) => appointment.status === statusFilter,
       );
     }
 
     const [sortBy, order] = sortOption.split("-");
 
-    appointments.sort((a, b) => {
+    filtered.sort((a, b) => {
       const valA =
         sortBy === "datetime"
           ? new Date(a.datetime).getTime()
@@ -66,13 +67,8 @@ export default function Dashboard() {
       return 0;
     });
 
-    return appointments;
-  }, [debouncedSearchTerm, statusFilter, sortOption]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1000); // Simulate loading
-    return () => clearTimeout(timer);
-  }, []);
+    return filtered;
+  }, [appointments, debouncedSearchTerm, statusFilter, sortOption]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -95,11 +91,7 @@ export default function Dashboard() {
               onSort={setSortOption}
             />
             <div className="mx-auto mt-6 grid max-w-3xl grid-cols-1 gap-6">
-              {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-[240px] w-full" />
-                ))
-              ) : filteredAppointments.length > 0 ? (
+              {filteredAppointments.length > 0 ? (
                 filteredAppointments.map((appointment) => (
                   <AppointmentCard
                     key={appointment.id}

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\PatientDashboardController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotification;
@@ -17,7 +18,7 @@ Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
 // Patient Dashboard
 Route::middleware(['auth:patient'])->group(function (): void {
-    Route::get('patient/dashboard', fn () => Inertia::render('patient-dashboard'))->name('patient.dashboard');
+    Route::get('patient/dashboard', [PatientDashboardController::class, 'index'])->name('patient.dashboard');
     
     // Patient Settings
     Route::redirect('patient/settings', '/patient/settings/profile');
