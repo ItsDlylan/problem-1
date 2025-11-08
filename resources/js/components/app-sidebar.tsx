@@ -12,19 +12,14 @@ import {
 } from "@/components/ui/sidebar";
 import { type NavItem, type SharedData } from "@/types";
 import { Link, usePage } from "@inertiajs/react";
-import { BookOpen, Folder, LayoutGrid } from "lucide-react";
+import { BookOpen, Calendar, Folder, HelpCircle, LayoutGrid } from "lucide-react";
 import AppLogo from "./app-logo";
 
 const footerNavItems: NavItem[] = [
   {
-    title: "Repository",
-    href: "https://github.com/laravel/react-starter-kit",
-    icon: Folder,
-  },
-  {
-    title: "Documentation",
-    href: "https://laravel.com/docs/starter-kits#react",
-    icon: BookOpen,
+    title: "Support",
+    href: "https://support.medai.com",
+    icon: HelpCircle,
   },
 ];
 
@@ -34,12 +29,21 @@ export function AppSidebar() {
 
   // Build navigation items based on user type
   // Dashboard route differs for patients vs facility users
+  // Facility users get additional navigation items like Calendar
   const mainNavItems: NavItem[] = [
     {
       title: "Dashboard",
       href: isPatient ? "/patient/dashboard" : "/facility/dashboard",
       icon: LayoutGrid,
     },
+    // Calendar link only shown for facility users (not patients)
+    ...(isPatient ? [] : [
+      {
+        title: "Calendar",
+        href: "/facility/calendar",
+        icon: Calendar,
+      },
+    ]),
   ];
 
   return (

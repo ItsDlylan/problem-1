@@ -107,11 +107,9 @@ Route::middleware('guest')->group(function (): void {
     Route::post('forgot-password', [UserEmailResetNotification::class, 'store'])
         ->name('password.email');
 
-    // Session...
-    Route::get('login', [SessionController::class, 'create'])
-        ->name('login');
-    Route::post('login', [SessionController::class, 'store'])
-        ->name('login.store');
+    // Note: Login routes have been moved to routes/auth.php
+    // Patients use /patient/login, facility users use /facility/login
+    // The old /login route is no longer used
 });
 
 Route::middleware('auth')->group(function (): void {
