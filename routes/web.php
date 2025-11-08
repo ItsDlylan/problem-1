@@ -2,13 +2,10 @@
 
 declare(strict_types=1);
 
-<<<<<<< HEAD
 use App\Http\Controllers\ChatController;
-=======
 use App\Http\Controllers\FacilityPasswordController;
 use App\Http\Controllers\FacilityProfileController;
 use App\Http\Controllers\FacilityTwoFactorAuthenticationController;
->>>>>>> main
 use App\Http\Controllers\PatientDashboardController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
