@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('email');
             $table->string('phone')->nullable();
             $table->date('dob')->nullable();
-            $table->foreignId('default_insurance_plan_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('default_insurance_plan_id')->nullable()->constrained('insurance_plans')->onDelete('set null');
             $table->string('preferred_language', 10)->nullable();
             $table->json('meta')->nullable();
             $table->timestamps();
