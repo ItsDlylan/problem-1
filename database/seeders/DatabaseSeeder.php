@@ -27,6 +27,7 @@ final class DatabaseSeeder extends Seeder
         // Day 2: Dependent tables (relate to core tables)
         $this->call([
             FacilityDoctorSeeder::class, // Depends on facilities, doctors
+            FacilityUserSeeder::class, // Depends on facilities, doctors (via facility_doctors)
             InsurancePlanSeeder::class, // Depends on insurance_providers
             FacilityInsurancePlanSeeder::class, // Depends on facilities, insurance_plans
             ServiceOfferingSeeder::class, // Depends on services, doctors, facilities

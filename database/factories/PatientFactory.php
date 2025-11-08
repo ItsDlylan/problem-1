@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\Patient;
-use App\Models\User;
 use App\Models\InsurancePlan;
+use App\Models\Patient;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Patient>
@@ -22,10 +22,10 @@ final class PatientFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
+            'password' => Hash::make('password'), // Default password for testing: 'password'
             'phone' => fake()->phoneNumber(),
             'dob' => fake()->dateTimeBetween('-80 years', '-18 years'),
             'default_insurance_plan_id' => InsurancePlan::factory(),
