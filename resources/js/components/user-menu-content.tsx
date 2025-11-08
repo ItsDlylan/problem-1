@@ -9,8 +9,9 @@ import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
 import { edit } from '@/routes/user-profile';
 import { type User } from '@/types';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import { type SharedData } from '@/types';
 
 interface UserMenuContentProps {
     user: User;
@@ -18,6 +19,19 @@ interface UserMenuContentProps {
 
 export function UserMenuContent({ user }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
+    const { auth } = usePage<SharedData>().props;
+    
+    // Determine settings URL based on user type
+    // Patients use /patient/settings/profile, facility users use /settings/profile
+    const settingsUrl = auth.userType === 'patient' 
+        ? '/patient/settings/profile' 
+        : edit().url;
+    
+    // Determine logout URL based on user type
+    // Patients use /patient/logout, facility users use /logout
+    const logoutUrl = auth.userType === 'patient'
+        ? '/patient/logout'
+        : logout().url;
 
     const handleLogout = () => {
         cleanup();
@@ -36,7 +50,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full"
-                        href={edit()}
+                        href={settingsUrl}
                         as="button"
                         prefetch
                         onClick={cleanup}
@@ -50,7 +64,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             <DropdownMenuItem asChild>
                 <Link
                     className="block w-full"
-                    href={logout()}
+                    href={logoutUrl}
                     as="button"
                     onClick={handleLogout}
                     data-test="logout-button"

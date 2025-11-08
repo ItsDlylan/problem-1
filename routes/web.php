@@ -18,6 +18,11 @@ Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 // Patient Dashboard
 Route::middleware(['auth:patient'])->group(function (): void {
     Route::get('patient/dashboard', fn () => Inertia::render('patient-dashboard'))->name('patient.dashboard');
+    
+    // Patient Settings
+    Route::redirect('patient/settings', '/patient/settings/profile');
+    Route::get('patient/settings/profile', [\App\Http\Controllers\PatientProfileController::class, 'edit'])->name('patient-profile.edit');
+    Route::patch('patient/settings/profile', [\App\Http\Controllers\PatientProfileController::class, 'update'])->name('patient-profile.update');
 });
 
 // Facility Dashboard

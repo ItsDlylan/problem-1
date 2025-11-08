@@ -38,9 +38,20 @@ final class HandleInertiaRequests extends Middleware
         [$message, $author] = str($quote)->explode('-');
 
         // Get the authenticated user from any guard (patient, facility, or default)
-        $user = $request->user('patient') 
-            ?? $request->user('facility') 
-            ?? $request->user();
+        // Also determine which guard was used to identify user type
+        $patient = $request->user('patient');
+        $facility = $request->user('facility');
+        $user = $patient ?? $facility ?? $request->user();
+        
+        // Determine user type based on which guard authenticated the user
+        $userType = null;
+        if ($patient !== null) {
+            $userType = 'patient';
+        } elseif ($facility !== null) {
+            $userType = 'facility';
+        } elseif ($user !== null) {
+            $userType = 'facility'; // Default guard is for facility users
+        }
 
         return [
             ...parent::share($request),
@@ -48,6 +59,7 @@ final class HandleInertiaRequests extends Middleware
             'quote' => ['message' => mb_trim((string) $message), 'author' => mb_trim((string) $author)],
             'auth' => [
                 'user' => $user,
+                'userType' => $userType, // 'patient', 'facility', or null
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
