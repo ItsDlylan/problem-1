@@ -33,9 +33,16 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
         ? '/patient/logout'
         : logout().url;
 
-    const handleLogout = () => {
+    const handleLogout = (e: React.MouseEvent) => {
+        e.preventDefault();
         cleanup();
-        router.flushAll();
+        // Use router.post() for logout since it requires POST method
+        // The backend will redirect to '/' (welcome page) after logout
+        router.post(logoutUrl, {}, {
+            onFinish: () => {
+                router.flushAll();
+            },
+        });
     };
 
     return (
@@ -61,17 +68,16 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-                <Link
-                    className="block w-full"
-                    href={logoutUrl}
-                    as="button"
+            <DropdownMenuItem>
+                <button
+                    className="flex w-full items-center"
                     onClick={handleLogout}
                     data-test="logout-button"
+                    type="button"
                 >
-                    <LogOut className="mr-2" />
+                    <LogOut className="mr-2 h-4 w-4" />
                     Log out
-                </Link>
+                </button>
             </DropdownMenuItem>
         </>
     );
