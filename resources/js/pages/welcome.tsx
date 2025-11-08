@@ -58,18 +58,24 @@ export default function Welcome() {
                                     <p className="mb-3 text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC]">
                                         Quick Access
                                     </p>
-                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                    <div className="flex flex-col gap-2">
                                         <Link
-                                            href={login()}
+                                            href="/patient/login"
                                             className="inline-flex items-center justify-center rounded-sm border border-[#19140035] bg-white px-4 py-2 text-sm font-medium text-[#1b1b18] transition-colors hover:bg-[#FDFDFC] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:bg-[#161615] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                         >
-                                            Log in
+                                            Login as Patient
                                         </Link>
                                         <Link
-                                            href={register()}
+                                            href="/facility/login"
+                                            className="inline-flex items-center justify-center rounded-sm border border-[#19140035] bg-white px-4 py-2 text-sm font-medium text-[#1b1b18] transition-colors hover:bg-[#FDFDFC] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:bg-[#161615] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                        >
+                                            Login as Doctor/Facility
+                                        </Link>
+                                        <Link
+                                            href="/patient/register"
                                             className="inline-flex items-center justify-center rounded-sm border border-black bg-[#1b1b18] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-black dark:border-[#eeeeec] dark:bg-[#eeeeec] dark:text-[#1C1C1A] dark:hover:bg-white"
                                         >
-                                            Register
+                                            Register as Patient
                                         </Link>
                                     </div>
                                 </div>
