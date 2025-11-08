@@ -32,6 +32,7 @@ Route::middleware(['auth:patient'])->group(function (): void {
 // Facility Dashboard
 Route::middleware(['auth:facility'])->group(function (): void {
     Route::get('facility/dashboard', fn () => Inertia::render('facility-dashboard'))->name('facility.dashboard');
+    Route::get('facility/calendar', fn () => Inertia::render('Facility/Calendar'))->name('facility.calendar');
 });
 
 Route::middleware('auth')->group(function (): void {

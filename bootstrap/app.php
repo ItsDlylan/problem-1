@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function () {
             Route::middleware('web')
                 ->group(base_path('routes/auth.php'));
+            
+            // Facility API routes
+            Route::prefix('api/facility')
+                ->middleware('api')
+                ->group(base_path('routes/api/facility.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
