@@ -32,8 +32,31 @@ final readonly class DoctorController
             ], 401);
         }
 
-        // Get doctors that belong to this facility through the pivot table
-        // Using the facilities relationship on Doctor model
+        // If user is a doctor, return only their own doctor record
+        // Receptionists and admins can see all doctors
+        if ($facilityUser->role === 'doctor' && $facilityUser->doctor_id) {
+            $doctor = Doctor::where('id', $facilityUser->doctor_id)
+                ->whereHas('facilities', function ($query) use ($facilityUser) {
+                    $query->where('facilities.id', $facilityUser->facility_id)
+                        ->where('facility_doctors.active', true);
+                })
+                ->select('id', 'display_name', 'first_name', 'last_name', 'specialty')
+                ->first();
+
+            if (!$doctor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Doctor record not found.',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [$doctor], // Return as array for consistency
+            ]);
+        }
+
+        // For receptionists and admins, return all doctors in the facility
         $doctors = Doctor::whereHas('facilities', function ($query) use ($facilityUser) {
             $query->where('facilities.id', $facilityUser->facility_id)
                 ->where('facility_doctors.active', true);

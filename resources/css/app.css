@@ -154,3 +154,209 @@
 .animate-jump {
   animation: jump 0.7s ease-out;
 }
+
+/* React Big Calendar Dark Mode Styles */
+.dark .rbc-calendar {
+  color: var(--foreground);
+  background-color: var(--card);
+}
+
+.dark .rbc-header {
+  border-bottom-color: var(--border);
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+.dark .rbc-month-view,
+.dark .rbc-time-view,
+.dark .rbc-day-view {
+  border-color: var(--border);
+}
+
+.dark .rbc-month-row {
+  border-color: var(--border);
+}
+
+.dark .rbc-day-bg {
+  border-color: var(--border);
+}
+
+.dark .rbc-off-range-bg {
+  background-color: var(--muted);
+  opacity: 0.3;
+}
+
+.dark .rbc-today {
+  background-color: var(--accent);
+  opacity: 0.2;
+}
+
+.dark .rbc-date-cell {
+  color: var(--foreground);
+}
+
+.dark .rbc-date-cell > a,
+.dark .rbc-date-cell > a:active,
+.dark .rbc-date-cell > a:visited {
+  color: var(--foreground);
+}
+
+.dark .rbc-header {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.dark .rbc-time-header-content {
+  border-left-color: var(--border);
+}
+
+.dark .rbc-time-content {
+  border-top-color: var(--border);
+}
+
+.dark .rbc-time-slot {
+  border-top-color: var(--border);
+}
+
+.dark .rbc-time-header-gutter,
+.dark .rbc-time-gutter {
+  background-color: var(--card);
+  border-right-color: var(--border);
+}
+
+.dark .rbc-time-gutter .rbc-timeslot-group {
+  border-bottom-color: var(--border);
+}
+
+.dark .rbc-day-slot .rbc-time-slot {
+  border-top-color: var(--border);
+}
+
+.dark .rbc-event {
+    border-color: var(--border);
+    color: var(--foreground);
+}
+
+.dark .rbc-event-label {
+    color: var(--foreground);
+}
+
+/* Ensure events are visible in month view */
+.rbc-month-view .rbc-event {
+    min-height: 20px !important;
+    padding: 4px 6px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    overflow: visible !important;
+}
+
+.rbc-month-view .rbc-event-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rbc-month-view .rbc-event-label {
+    font-size: 10px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.rbc-month-view .rbc-event-title {
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Make sure events are visible even when short */
+.rbc-month-view .rbc-day-slot .rbc-event {
+    position: relative;
+    z-index: 1;
+}
+
+.dark .rbc-selected {
+  background-color: var(--accent);
+}
+
+.dark .rbc-show-more {
+  background-color: var(--muted);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.dark .rbc-show-more:hover {
+  background-color: var(--accent);
+}
+
+.dark .rbc-toolbar {
+  color: var(--foreground);
+}
+
+.dark .rbc-toolbar button {
+  color: var(--foreground);
+  border-color: var(--border);
+  background-color: var(--card);
+}
+
+.dark .rbc-toolbar button:hover,
+.dark .rbc-toolbar button:focus {
+  background-color: var(--accent);
+  color: var(--foreground);
+}
+
+.dark .rbc-toolbar button.rbc-active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.dark .rbc-toolbar button:active {
+  background-color: var(--accent);
+  color: var(--foreground);
+}
+
+.dark .rbc-popover {
+  background-color: var(--popover);
+  border-color: var(--border);
+  color: var(--popover-foreground);
+}
+
+.dark .rbc-popover-content {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
+
+.dark .rbc-popover-header {
+  background-color: var(--popover);
+  border-bottom-color: var(--border);
+  color: var(--popover-foreground);
+}
+
+.dark .rbc-popover-body {
+  color: var(--popover-foreground);
+}
+
+.dark .rbc-agenda-view table.rbc-agenda-table {
+  border-color: var(--border);
+}
+
+.dark .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+  border-color: var(--border);
+}
+
+.dark .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  border-color: var(--border);
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+.dark .rbc-agenda-date-cell,
+.dark .rbc-agenda-time-cell {
+  color: var(--foreground);
+}
+
+.dark .rbc-agenda-event-cell {
+  color: var(--foreground);
+}

@@ -20,9 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')
                 ->group(base_path('routes/auth.php'));
             
-            // Facility API routes
+            // Facility API routes - use 'web' middleware to support session-based auth
             Route::prefix('api/facility')
-                ->middleware('api')
+                ->middleware('web')
                 ->group(base_path('routes/api/facility.php'));
         },
     )

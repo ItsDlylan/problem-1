@@ -61,10 +61,21 @@ async function fetchApi<T>(
     });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-            message: `HTTP error! status: ${response.status}`,
-        }));
-        throw new Error(errorData.message || `API request failed: ${response.status}`);
+        // Try to parse error response
+        let errorMessage = `API request failed: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+            
+            // Handle authentication errors specifically
+            if (response.status === 401 || response.status === 403) {
+                errorMessage = 'Unauthenticated. Please log in again.';
+            }
+        } catch {
+            // If JSON parsing fails, use status text
+            errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
     }
 
     return response.json();

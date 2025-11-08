@@ -39,11 +39,20 @@ final readonly class AvailabilitySlotController
         }
 
         // Build query for availability slots belonging to this facility
+        // Load relationships including patient data for appointments
         $query = AvailabilitySlot::where('facility_id', $facilityUser->facility_id)
-            ->with(['doctor', 'serviceOffering', 'appointments']);
+            ->with([
+                'doctor',
+                'serviceOffering',
+                'appointments.patient', // Load patient relationship for appointments
+            ]);
 
-        // Filter by doctor if provided
-        if ($request->has('doctor_id') && $request->doctor_id) {
+        // If user is a doctor, automatically filter to show only their own calendar
+        // Receptionists and admins can see all doctors' calendars
+        if ($facilityUser->role === 'doctor' && $facilityUser->doctor_id) {
+            $query->where('doctor_id', $facilityUser->doctor_id);
+        } elseif ($request->has('doctor_id') && $request->doctor_id) {
+            // For receptionists and admins, allow filtering by doctor if provided
             $query->where('doctor_id', $request->doctor_id);
         }
 

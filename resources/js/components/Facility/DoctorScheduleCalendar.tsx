@@ -25,18 +25,8 @@ const localizer = dateFnsLocalizer({
 });
 
 /**
- * Color palette for doctors (generates consistent colors per doctor ID)
- * Uses HSL color space for better color distribution
- */
-function getDoctorColor(doctorId: number): string {
-    // Generate a hue based on doctor ID (0-360 degrees)
-    const hue = (doctorId * 137.508) % 360; // Golden angle approximation for better distribution
-    // Use moderate saturation and lightness for good visibility
-    return `hsl(${hue}, 70%, 50%)`;
-}
-
-/**
  * Transform availability slots into calendar events for react-big-calendar
+ * If a slot has appointments, use the appointment status (e.g., no_show) instead of slot status
  */
 function transformSlotsToEvents(slots: AvailabilitySlot[]): CalendarEvent[] {
     return slots.map((slot) => {
@@ -45,36 +35,89 @@ function transformSlotsToEvents(slots: AvailabilitySlot[]): CalendarEvent[] {
             ? ` - ${slot.service_offering.service_id}` // Adjust based on actual service structure
             : '';
 
+        // If slot has appointments, use the first appointment's status (for display purposes)
+        // This allows us to show "no_show" status for appointments
+        let displayStatus = slot.status;
+        if (slot.appointments && slot.appointments.length > 0) {
+            // Use the appointment status if it's more specific (e.g., no_show, completed)
+            const appointmentStatus = slot.appointments[0].status;
+            // Map appointment statuses to display statuses
+            if (['no_show', 'completed', 'cancelled', 'checked_in', 'in_progress'].includes(appointmentStatus)) {
+                displayStatus = appointmentStatus;
+            }
+        }
+
         return {
             id: slot.id,
-            title: `${doctorName}${serviceName} (${slot.status})`,
+            title: `${doctorName}${serviceName} (${displayStatus})`,
             start: new Date(slot.start_at),
             end: new Date(slot.end_at),
             resource: {
                 doctorId: slot.doctor_id,
                 doctorName,
                 slotId: slot.id,
-                status: slot.status,
+                status: displayStatus, // Use display status (appointment status if available)
+                slotStatus: slot.status, // Keep original slot status
                 serviceOfferingId: slot.service_offering_id,
+                slot: slot, // Include full slot data for details view
             },
         };
     });
 }
 
 /**
- * Custom event style function to color-code events by doctor
+ * Get color based on slot/appointment status (matches legend)
+ * - Booked/Completed: Green
+ * - Reserved: Yellow
+ * - Open: Blue
+ * - Cancelled: Gray
+ * - No Show: Red/Orange
+ */
+function getStatusColor(status: string): string {
+    switch (status) {
+        case 'booked':
+        case 'completed':
+        case 'checked_in':
+        case 'in_progress':
+            return 'rgb(34, 197, 94)'; // green-500
+        case 'reserved':
+            return 'rgb(234, 179, 8)'; // yellow-500
+        case 'open':
+        case 'scheduled':
+            return 'rgb(59, 130, 246)'; // blue-500
+        case 'cancelled':
+            return 'rgb(107, 114, 128)'; // gray-500
+        case 'no_show':
+            return 'rgb(239, 68, 68)'; // red-500
+        default:
+            return 'rgb(107, 114, 128)'; // gray-500 as default
+    }
+}
+
+/**
+ * Custom event style function to color-code events by status
+ * Enhanced styling for better visibility in month view
  */
 function eventStyleGetter(event: CalendarEvent) {
-    const color = getDoctorColor(event.resource.doctorId);
+    // Use status-based color instead of doctor-based color
+    const color = getStatusColor(event.resource.status);
     
-    // Different opacity based on status
+    // Different opacity and styling based on status
     let opacity = 1;
-    if (event.resource.status === 'booked') {
+    let fontWeight = 'normal';
+    if (event.resource.status === 'booked' || event.resource.status === 'completed') {
         opacity = 0.9;
+        fontWeight = 'bold';
     } else if (event.resource.status === 'reserved') {
         opacity = 0.7;
-    } else if (event.resource.status === 'open') {
+        fontWeight = '600';
+    } else if (event.resource.status === 'open' || event.resource.status === 'scheduled') {
         opacity = 0.5;
+    } else if (event.resource.status === 'cancelled') {
+        opacity = 0.5;
+    } else if (event.resource.status === 'no_show') {
+        opacity = 0.85;
+        fontWeight = '600';
     }
 
     return {
@@ -84,8 +127,15 @@ function eventStyleGetter(event: CalendarEvent) {
             opacity,
             color: '#fff',
             borderRadius: '4px',
-            border: '1px solid',
-            padding: '2px 4px',
+            border: '2px solid',
+            padding: '4px 6px',
+            fontSize: '12px',
+            fontWeight,
+            minHeight: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            cursor: 'pointer',
         },
     };
 }
@@ -93,17 +143,20 @@ function eventStyleGetter(event: CalendarEvent) {
 interface DoctorScheduleCalendarProps {
     slots: AvailabilitySlot[];
     currentDate: Date;
+    currentView: View;
     onNavigate: (date: Date, view: View) => void;
     onSelectEvent?: (event: CalendarEvent) => void;
 }
 
 /**
- * Calendar component that displays doctor availability slots in a monthly view.
- * Events are color-coded by doctor and show individual time slots.
+ * Calendar component that displays doctor availability slots.
+ * Supports month, week, and day views.
+ * Events are color-coded by status and show individual time slots.
  */
 export function DoctorScheduleCalendar({
     slots,
     currentDate,
+    currentView,
     onNavigate,
     onSelectEvent,
 }: DoctorScheduleCalendarProps) {
@@ -117,19 +170,39 @@ export function DoctorScheduleCalendar({
         }
     };
 
+    // Custom event component for better visibility in month view
+    const EventComponent = ({ event }: { event: CalendarEvent }) => {
+        const timeStr = `${format(event.start, 'HH:mm')} - ${format(event.end, 'HH:mm')}`;
+        return (
+            <div className="rbc-event-content" title={`${event.title} (${timeStr})`}>
+                <div className="rbc-event-label">{timeStr}</div>
+                <div className="rbc-event-title">{event.resource.doctorName}</div>
+            </div>
+        );
+    };
+
+    // Custom toolbar component to hide react-big-calendar's built-in toolbar
+    // We use our own custom controls instead
+    const Toolbar = () => null;
+
     return (
         <div className="h-[600px] w-full rounded-lg border bg-card p-4">
             <Calendar
+                key={`${currentDate.getTime()}-${currentView}`}
                 localizer={localizer}
                 events={events}
                 startAccessor="start"
                 endAccessor="end"
-                defaultDate={currentDate}
-                defaultView="month"
-                view="month"
+                date={currentDate}
+                view={currentView}
                 onNavigate={onNavigate}
+                onView={onNavigate}
                 onSelectEvent={handleSelectEvent}
                 eventPropGetter={eventStyleGetter}
+                components={{
+                    event: EventComponent,
+                    toolbar: Toolbar, // Hide built-in toolbar
+                }}
                 popup
                 showMultiDayTimes
                 step={15} // 15-minute intervals

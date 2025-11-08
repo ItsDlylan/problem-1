@@ -73,6 +73,18 @@ export interface ServiceOffering {
 }
 
 /**
+ * Patient interface for appointment details (simplified version).
+ */
+export interface AppointmentPatient {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string | null;
+    preferred_language?: string | null;
+}
+
+/**
  * Appointment interface (reusing from appointment.ts if available).
  */
 export interface Appointment {
@@ -86,6 +98,8 @@ export interface Appointment {
     notes: string | null;
     created_at: string;
     updated_at: string;
+    // Relationships (loaded via API)
+    patient?: AppointmentPatient;
 }
 
 /**
@@ -101,8 +115,10 @@ export interface CalendarEvent {
         doctorId: number;
         doctorName: string;
         slotId: number;
-        status: AvailabilitySlot['status'];
+        status: AvailabilitySlot['status'] | 'no_show' | 'completed' | 'cancelled' | 'scheduled' | 'checked_in' | 'in_progress';
+        slotStatus?: AvailabilitySlot['status']; // Original slot status
         serviceOfferingId: number | null;
+        slot?: AvailabilitySlot; // Full slot data for details view
     };
 }
 
@@ -114,6 +130,7 @@ export interface GetAvailabilitySlotsParams {
     end_date?: string; // YYYY-MM-DD format
     doctor_id?: number;
     per_page?: number;
+    page?: number;
 }
 
 /**
