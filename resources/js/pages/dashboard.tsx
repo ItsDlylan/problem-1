@@ -84,7 +84,7 @@ export default function Dashboard() {
               onFilterByStatus={setStatusFilter}
               onSort={setSortOption}
             />
-            <div className="mt-6 grid grid-cols-1 gap-6">
+            <div className="mx-auto mt-6 grid max-w-3xl grid-cols-1 gap-6">
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <Skeleton key={i} className="h-[240px] w-full" />
@@ -97,7 +97,7 @@ export default function Dashboard() {
                   />
                 ))
               ) : (
-                <p className="text-center text-gray-500 md:col-span-4">
+                <p className="text-center text-gray-500">
                   No appointments found.
                 </p>
               )}
