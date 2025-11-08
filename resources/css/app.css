@@ -141,3 +141,16 @@
         @apply bg-background text-foreground;
     }
 }
+
+@keyframes jump {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-jump {
+  animation: jump 0.7s ease-out;
+}

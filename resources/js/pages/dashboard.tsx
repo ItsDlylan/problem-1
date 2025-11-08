@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [sortOption, setSortOption] = useState("datetime-desc");
   const [isChatbotOpen, setChatbotOpen] = useState(false);
   const [isLoading, setLoading] = useState(true);
+  const [jump, setJump] = useState(false);
 
   const filteredAppointments = useMemo(() => {
     let appointments = mockAppointments.filter((appointment) => {
@@ -73,6 +74,15 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setJump(true);
+      setTimeout(() => setJump(false), 700); // Duration of the animation
+    }, 5000); // Trigger animation every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Appointments Dashboard" />
@@ -113,10 +123,12 @@ export default function Dashboard() {
           />
         </div>
         <Button
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg transition-transform hover:scale-110"
-          onClick={() => setChatbotOpen(true)}
+            className={`fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg transition-transform hover:scale-110 ${
+                jump ? "animate-jump" : ""
+            }`}
+            onClick={() => setChatbotOpen(true)}
         >
-          <MessageSquare className="h-7 w-7" />
+            <MessageSquare className="h-7 w-7" />
         </Button>
       </div>
     </AppLayout>
