@@ -23,6 +23,9 @@ Route::middleware(['auth:patient'])->group(function (): void {
     Route::redirect('patient/settings', '/patient/settings/profile');
     Route::get('patient/settings/profile', [\App\Http\Controllers\PatientProfileController::class, 'edit'])->name('patient-profile.edit');
     Route::patch('patient/settings/profile', [\App\Http\Controllers\PatientProfileController::class, 'update'])->name('patient-profile.update');
+    
+    // Patient Appearance Settings
+    Route::get('patient/settings/appearance', fn () => Inertia::render('appearance/update'))->name('patient-appearance.edit');
 });
 
 // Facility Dashboard

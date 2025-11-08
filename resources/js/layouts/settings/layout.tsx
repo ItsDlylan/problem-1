@@ -6,34 +6,39 @@ import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editPassword } from '@/routes/password';
 import { show } from '@/routes/two-factor';
 import { edit } from '@/routes/user-profile';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: edit(),
-        icon: null,
-    },
-    {
-        title: 'Password',
-        href: editPassword(),
-        icon: null,
-    },
-    {
-        title: 'Two-Factor Auth',
-        href: show(),
-        icon: null,
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-        icon: null,
-    },
-];
-
 export default function SettingsLayout({ children }: PropsWithChildren) {
+    const { auth } = usePage<SharedData>().props;
+    const isPatient = auth.userType === 'patient';
+    
+    // Build navigation items based on user type
+    // Patients use /patient/settings/* routes, facility users use /settings/* routes
+    const sidebarNavItems: NavItem[] = [
+        {
+            title: 'Profile',
+            href: isPatient ? '/patient/settings/profile' : edit().url,
+            icon: null,
+        },
+        {
+            title: 'Password',
+            href: isPatient ? '/settings/password' : editPassword().url, // Password might need patient route too
+            icon: null,
+        },
+        {
+            title: 'Two-Factor Auth',
+            href: isPatient ? '/settings/two-factor' : show().url, // Two-factor might need patient route too
+            icon: null,
+        },
+        {
+            title: 'Appearance',
+            href: isPatient ? '/patient/settings/appearance' : editAppearance().url,
+            icon: null,
+        },
+    ];
+
     // When server-side rendering, we only render the layout on the client...
     if (typeof window === 'undefined') {
         return null;
