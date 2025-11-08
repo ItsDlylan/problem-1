@@ -5,34 +5,34 @@
 ## Migration Creation Order (Critical - must be in this order due to FK dependencies)
 
 ### Day 1: Core Reference Tables (no dependencies)
-- [ ] **1.1** Create `facilities` table migration
-- [ ] **1.2** Create `doctors` table migration
-- [ ] **1.3** Create `services` table migration
-- [ ] **1.4** Create `step_templates` table migration
-- [ ] **1.5** Create `insurance_providers` table migration
-- [ ] **1.6** Run migrations: `php artisan migrate`
-- [ ] **1.7** Create factories for above tables
-- [ ] **1.8** Create seeders for above tables
+- [X] **1.1** Create `facilities` table migration
+- [X] **1.2** Create `doctors` table migration
+- [X] **1.3** Create `services` table migration
+- [X] **1.4** Create `step_templates` table migration
+- [X] **1.5** Create `insurance_providers` table migration
+- [X] **1.6** Run migrations: `php artisan migrate`
+- [X] **1.7** Create factories for above tables
+- [X] **1.8** Create seeders for above tables
 
 ### Day 2: Dependent Tables (relate to core tables)
-- [ ] **2.1** Create `facility_doctors` pivot table migration
-- [ ] **2.2** Create `insurance_plans` table migration (depends on insurance_providers)
-- [ ] **2.3** Create `facility_insurance_plans` table migration (depends on facilities, insurance_plans)
-- [ ] **2.4** Create `service_offerings` table migration (depends on services, doctors, facilities)
-- [ ] **2.5** Create `service_workflows` table migration (depends on service_offerings, insurance_plans)
-- [ ] **2.6** Create `workflow_steps` table migration (depends on service_workflows, step_templates)
-- [ ] **2.7** Run migrations: `php artisan migrate`
-- [ ] **2.8** Create factories and seeders
+- [X] **2.1** Create `facility_doctors` pivot table migration
+- [X] **2.2** Create `insurance_plans` table migration (depends on insurance_providers)
+- [X] **2.3** Create `facility_insurance_plans` table migration (depends on facilities, insurance_plans)
+- [X] **2.4** Create `service_offerings` table migration (depends on services, doctors, facilities)
+- [X] **2.5** Create `service_workflows` table migration (depends on service_offerings, insurance_plans)
+- [X] **2.6** Create `workflow_steps` table migration (depends on service_workflows, step_templates)
+- [X] **2.7** Run migrations: `php artisan migrate`
+- [X] **2.8** Create factories and seeders
 
 ### Day 3: Scheduling & Booking Tables
-- [ ] **3.1** Create `availability_rules` table migration (depends on doctors, facilities, service_offerings)
-- [ ] **3.2** Create `availability_exceptions` table migration (depends on availability_rules, facilities, doctors)
-- [ ] **3.3** Create `availability_slots` table migration (depends on facilities, doctors, service_offerings, availability_rules)
-- [ ] **3.4** Create `patients` table migration (depends on insurance_plans)
-- [ ] **3.5** Create `appointments` table migration (depends on patients, facilities, doctors, service_offerings, availability_slots, service_workflows)
-- [ ] **3.6** Create `appointment_steps` table migration (depends on appointments, workflow_steps, step_templates)
-- [ ] **3.7** Run migrations: `php artisan migrate`
-- [ ] **3.8** Create factories and seeders
+- [X] **3.1** Create `availability_rules` table migration (depends on doctors, facilities, service_offerings)
+- [X] **3.2** Create `availability_exceptions` table migration (depends on availability_rules, facilities, doctors)
+- [X] **3.3** Create `availability_slots` table migration (depends on facilities, doctors, service_offerings, availability_rules)
+- [X] **3.4** Create `patients` table migration (depends on insurance_plans)
+- [X] **3.5** Create `appointments` table migration (depends on patients, facilities, doctors, service_offerings, availability_slots, service_workflows)
+- [X] **3.6** Create `appointment_steps` table migration (depends on appointments, workflow_steps, step_templates)
+- [X] **3.7** Run migrations: `php artisan migrate`
+- [X] **3.8** Create factories and seeders
 
 ## Detailed Table Specifications
 
