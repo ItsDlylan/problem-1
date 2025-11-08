@@ -2,8 +2,9 @@
 **Priority: HIGH - Depends on Phase 1, Blocks Phase 3**
 **Estimated Time: 2 days**
 **Dependencies: Database migrations must be complete**
+**Note: This is BACKEND authentication system. Coworker handles frontend login UI.**
 
-## Day 1: Patient Authentication
+## Day 1: Authentication Backend
 
 ### Models & Guards Setup
 - [ ] **2.1.1** Create `Patient` model (authenticatable)
