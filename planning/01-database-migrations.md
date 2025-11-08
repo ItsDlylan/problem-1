@@ -316,8 +316,8 @@ Schema::create('appointment_steps', function (Blueprint $table) {
 ```
 
 ## Verification Steps
-- [ ] Run `php artisan migrate:fresh` to verify all migrations work
-- [ ] Run `php artisan db:seed` to verify seeders work
-- [ ] Check all foreign key constraints are correct
-- [ ] Verify indexes are created properly
-- [ ] Test soft deletes work on relevant tables
+- [X] Run `php artisan migrate:fresh` to verify all migrations work
+- [X] Run `php artisan db:seed` to verify seeders work
+- [X] Check all foreign key constraints are correct
+- [X] Verify indexes are created properly
+- [X] Test soft deletes work on relevant tables

@@ -7,12 +7,14 @@ namespace App\Models;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property-read int $id
+ * @property-read int|null $facility_user_id
  * @property-read string $first_name
  * @property-read string $last_name
  * @property-read string $display_name
@@ -32,6 +34,7 @@ final class Doctor extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'facility_user_id',
         'first_name',
         'last_name',
         'display_name',
@@ -46,6 +49,7 @@ final class Doctor extends Model
      */
     protected $casts = [
         'id' => 'integer',
+        'facility_user_id' => 'integer',
         'first_name' => 'string',
         'last_name' => 'string',
         'display_name' => 'string',
@@ -57,6 +61,14 @@ final class Doctor extends Model
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
+
+    /**
+     * Get the facility user associated with this doctor for authentication.
+     */
+    public function facilityUser(): BelongsTo
+    {
+        return $this->belongsTo(FacilityUser::class, 'facility_user_id');
+    }
 
     public function facilities(): BelongsToMany
     {
