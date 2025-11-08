@@ -36,6 +36,11 @@ final class FacilityUser extends Authenticatable implements MustVerifyEmail
     /**
      * @var list<string>
      */
+    protected $appends = [];
+
+    /**
+     * @var list<string>
+     */
     protected $fillable = [
         'name',
         'email',

@@ -17,6 +17,7 @@ use Illuminate\Notifications\Notifiable;
  * @property-read int $id
  * @property-read string $first_name
  * @property-read string $last_name
+ * @property-read string $name
  * @property-read string $email
  * @property-read string $password
  * @property-read string|null $remember_token
@@ -33,6 +34,11 @@ use Illuminate\Notifications\Notifiable;
 final class Patient extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, SoftDeletes;
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = ['name'];
 
     /**
      * @var list<string>
@@ -87,6 +93,14 @@ final class Patient extends Authenticatable implements MustVerifyEmail
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    /**
+     * Get the patient's full name.
+     */
+    public function getNameAttribute(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}");
     }
 }
 

@@ -13,10 +13,16 @@ use App\Http\Controllers\UserTwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', fn () => Inertia::render('dashboard'))->name('home');
+Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+// Patient Dashboard
+Route::middleware(['auth:patient'])->group(function (): void {
+    Route::get('patient/dashboard', fn () => Inertia::render('patient-dashboard'))->name('patient.dashboard');
+});
+
+// Facility Dashboard
+Route::middleware(['auth:facility'])->group(function (): void {
+    Route::get('facility/dashboard', fn () => Inertia::render('facility-dashboard'))->name('facility.dashboard');
 });
 
 Route::middleware('auth')->group(function (): void {

@@ -37,12 +37,17 @@ final class HandleInertiaRequests extends Middleware
 
         [$message, $author] = str($quote)->explode('-');
 
+        // Get the authenticated user from any guard (patient, facility, or default)
+        $user = $request->user('patient') 
+            ?? $request->user('facility') 
+            ?? $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => mb_trim((string) $message), 'author' => mb_trim((string) $author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
