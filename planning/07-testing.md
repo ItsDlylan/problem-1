@@ -1,60 +1,56 @@
 # Phase 6: Testing
 **Priority: LOWEST - Depends on all other phases**
-**Estimated Time: 2 days**
+**Estimated Time: 1.5 days** (reduced from 2 days)
 **Dependencies: All Phase 3, 4, 5 tasks must be complete**
 **Final Phase - No blocks**
+**Note: Coworker tests patient frontend - we test backend APIs and facility frontend**
 
 ## Task 6.1: Feature Tests (Browser/Integration Tests)
-**Duration: 1 day**
+**Duration: 0.5 day** (reduced from 1 day)
 **Dependencies: All backend and frontend features complete**
+**Note: Only test facility frontend, not patient frontend**
 
-### Patient Feature Tests
-- [ ] **6.1.1** Test patient registration flow
-  - Visit /patient/register
-  - Fill form with valid data
-  - Submit
-  - Assert redirected to dashboard
-  - Assert patient logged in
-  - Assert patient in database
+### Patient API Tests (Backend Only)
+- [ ] **6.1.1** Test patient registration API
+  - POST /api/patient/register with valid data
+  - Verify 201 status
+  - Verify patient created in database
+  - Verify password hashed
+  - Verify response format matches spec
 
-- [ ] **6.1.2** Test patient login flow
+- [ ] **6.1.2** Test patient login API
   - Create patient in database
-  - Visit /patient/login
-  - Fill form with credentials
-  - Submit
-  - Assert redirected to dashboard
-  - Assert patient logged in
+  - POST /api/patient/login with valid credentials
+  - Verify 200 status
+  - Verify patient data in response
+  - Verify token returned
+  - Test with invalid credentials: verify 401
 
-- [ ] **6.1.3** Test patient appointment booking
-  - Login as patient
-  - Visit /patient/book
-  - Select facility
-  - Select service
-  - Select doctor
-  - Select date and slot
-  - Confirm booking
-  - Assert appointment created
-  - Assert slot marked as booked
-  - Assert appointment_steps created
+- [ ] **6.1.3** Test patient appointment booking API
+  - Create patient and login
+  - Create facility, doctor, service, slot
+  - POST /api/patient/appointments with valid data
+  - Verify 201 status
+  - Verify appointment created
+  - Verify slot marked as booked
+  - Verify appointment_steps created
 
-- [ ] **6.1.4** Test patient appointment cancellation
-  - Login as patient
-  - Create appointment for patient
-  - Visit /patient/appointments
-  - Click cancel button
-  - Confirm cancellation
-  - Assert appointment status = 'cancelled'
-  - Assert slot status = 'open'
+- [ ] **6.1.4** Test patient appointment cancellation API
+  - Create patient and appointment
+  - POST /api/patient/appointments/{id}/cancel
+  - Verify 200 status
+  - Verify appointment status = 'cancelled'
+  - Verify slot status = 'open'
 
-- [ ] **6.1.5** Test patient profile update
-  - Login as patient
-  - Visit /patient/profile
-  - Update name or phone
-  - Submit
-  - Assert database updated
-  - Assert success message shown
+- [ ] **6.1.5** Test patient profile API
+  - Create patient and login
+  - GET /api/patient/profile
+  - Verify 200 status
+  - Verify correct patient data
+  - PUT /api/patient/profile with updates
+  - Verify database updated
 
-### Facility Feature Tests
+### Facility Feature Tests (Frontend + Backend)
 - [ ] **6.1.6** Test facility login flow
   - Create facility user in database
   - Visit /facility/login
@@ -70,7 +66,6 @@
   - Click status update button
   - Select new status
   - Assert appointment status updated
-  - Assert audit log created (if implemented)
 
 - [ ] **6.1.8** Test facility step status update (no-show cascade)
   - Login as facility user
@@ -162,7 +157,7 @@
 **Duration: 0.5 day**
 **Dependencies: All API endpoints complete**
 
-### Patient API Tests
+### Patient API Tests (Backend Only)
 - [ ] **6.3.1** Test GET /api/patient/appointments
   - Without auth: expect 401
   - With auth: expect list of patient's appointments
@@ -266,7 +261,8 @@
 - [ ] All API tests pass
 - [ ] All background job tests pass
 - [ ] Test coverage > 80% (optional for POC)
-- [ ] No console errors in frontend tests
+- [ ] **Patient API tests pass (for coworker's integration)**
+- [ ] Facility frontend tests pass
 - [ ] All edge cases tested
 - [ ] Authorization tests pass
 - [ ] Performance acceptable
