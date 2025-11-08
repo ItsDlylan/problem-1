@@ -30,8 +30,8 @@ const footerNavItems: NavItem[] = [
 
 export function AppSidebar() {
   const { auth } = usePage<SharedData>().props;
-  const isPatient = auth.userType === 'patient';
-  
+  const isPatient = auth.userType === "patient";
+
   // Build navigation items based on user type
   // Dashboard route differs for patients vs facility users
   const mainNavItems: NavItem[] = [
