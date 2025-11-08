@@ -23,8 +23,11 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
     
     // Determine settings URL based on user type
     // Patients use /patient/settings/profile, facility users use /settings/profile
+    // Regular users (User model) use /user/settings/profile
     const settingsUrl = auth.userType === 'patient' 
         ? '/patient/settings/profile' 
+        : auth.userType === 'facility'
+        ? '/settings/profile'
         : edit().url;
     
     // Determine logout URL based on user type
