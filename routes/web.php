@@ -2,7 +2,13 @@
 
 declare(strict_types=1);
 
+<<<<<<< HEAD
 use App\Http\Controllers\ChatController;
+=======
+use App\Http\Controllers\FacilityPasswordController;
+use App\Http\Controllers\FacilityProfileController;
+use App\Http\Controllers\FacilityTwoFactorAuthenticationController;
+>>>>>>> main
 use App\Http\Controllers\PatientDashboardController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
@@ -37,28 +43,51 @@ Route::middleware(['auth:patient'])->group(function (): void {
 // Facility Dashboard
 Route::middleware(['auth:facility'])->group(function (): void {
     Route::get('facility/dashboard', fn () => Inertia::render('facility-dashboard'))->name('facility.dashboard');
+    Route::get('facility/calendar', fn () => Inertia::render('Facility/Calendar'))->name('facility.calendar');
+    
+    // Facility Settings
+    Route::redirect('settings', '/settings/profile');
+    Route::get('settings/profile', [FacilityProfileController::class, 'edit'])->name('facility-profile.edit');
+    Route::patch('settings/profile', [FacilityProfileController::class, 'update'])->name('facility-profile.update');
+    
+    // Facility Password...
+    Route::get('settings/password', [FacilityPasswordController::class, 'edit'])->name('facility-password.edit');
+    Route::put('settings/password', [FacilityPasswordController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('facility-password.update');
+    
+    // Facility Appearance...
+    Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))->name('facility-appearance.edit');
+    
+    // Facility Two-Factor Authentication...
+    Route::get('settings/two-factor', [FacilityTwoFactorAuthenticationController::class, 'show'])
+        ->name('facility-two-factor.show');
 });
 
+// Regular User routes (for User model, not FacilityUser)
+// Note: These routes are for the default 'web' guard (User model)
+// Facility users should use the routes in the auth:facility group above
 Route::middleware('auth')->group(function (): void {
     // User...
     Route::delete('user', [UserController::class, 'destroy'])->name('user.destroy');
 
-    // User Profile...
-    Route::redirect('settings', '/settings/profile');
-    Route::get('settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
-    Route::patch('settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
+    // User Profile (for regular User model, not FacilityUser)
+    // Facility users should NOT use these routes - they have their own routes above
+    Route::redirect('user/settings', '/user/settings/profile');
+    Route::get('user/settings/profile', [UserProfileController::class, 'edit'])->name('user-profile.edit');
+    Route::patch('user/settings/profile', [UserProfileController::class, 'update'])->name('user-profile.update');
 
-    // User Password...
-    Route::get('settings/password', [UserPasswordController::class, 'edit'])->name('password.edit');
-    Route::put('settings/password', [UserPasswordController::class, 'update'])
+    // User Password (for regular User model)
+    Route::get('user/settings/password', [UserPasswordController::class, 'edit'])->name('password.edit');
+    Route::put('user/settings/password', [UserPasswordController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('password.update');
 
-    // Appearance...
-    Route::get('settings/appearance', fn () => Inertia::render('appearance/update'))->name('appearance.edit');
+    // Appearance (for regular User model)
+    Route::get('user/settings/appearance', fn () => Inertia::render('appearance/update'))->name('appearance.edit');
 
-    // User Two-Factor Authentication...
-    Route::get('settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
+    // User Two-Factor Authentication (for regular User model)
+    Route::get('user/settings/two-factor', [UserTwoFactorAuthenticationController::class, 'show'])
         ->name('two-factor.show');
 });
 

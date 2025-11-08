@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read string|null $notes
  * @property-read string|null $language
  * @property-read string|null $locale
+ * @property-read array|null $meta
  * @property-read int|null $updated_by
  * @property-read CarbonInterface $created_at
  * @property-read CarbonInterface $updated_at
@@ -48,6 +49,7 @@ final class Appointment extends Model
         'notes',
         'language',
         'locale',
+        'meta',
         'updated_by',
     ];
 
@@ -68,6 +70,7 @@ final class Appointment extends Model
         'notes' => 'string',
         'language' => 'string',
         'locale' => 'string',
+        'meta' => 'array',
         'updated_by' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

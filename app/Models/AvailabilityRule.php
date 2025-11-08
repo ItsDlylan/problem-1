@@ -88,5 +88,14 @@ final class AvailabilityRule extends Model
     {
         return $this->hasMany(AvailabilitySlot::class, 'created_from_rule_id');
     }
+
+    /**
+     * Scope a query to only include active availability rules.
+     * This is used when generating availability slots to only process rules that are currently active.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('active', true);
+    }
 }
 
