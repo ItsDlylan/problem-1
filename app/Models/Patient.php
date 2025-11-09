@@ -25,6 +25,7 @@ use Illuminate\Notifications\Notifiable;
  * @property-read string|null $phone
  * @property-read string|null $dob
  * @property-read int|null $default_insurance_plan_id
+ * @property-read string|null $insurance_card_number
  * @property-read string|null $preferred_language
  * @property-read array|null $meta
  * @property-read CarbonInterface $created_at
@@ -54,6 +55,7 @@ final class Patient extends Authenticatable implements MustVerifyEmail
         'default_insurance_plan_id',
         'preferred_language',
         'meta',
+        'insurance_card_number',
     ];
 
     /**
@@ -83,6 +85,7 @@ final class Patient extends Authenticatable implements MustVerifyEmail
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'insurance_card_number' => 'string',
     ];
 
     public function defaultInsurancePlan(): BelongsTo
