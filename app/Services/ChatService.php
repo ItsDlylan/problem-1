@@ -64,11 +64,18 @@ final readonly class ChatService
         $hasService = $parsedContent['has_service'] ?? false;
         $hasDatetime = $parsedContent['has_datetime'] ?? false;
 
-        // Extract appointment details if both service and datetime are provided
+        // Extract appointment details - handle partial information
         $extractedDetails = null;
-        if ($hasService && $hasDatetime && $serviceName && $datetime) {
+        
+        // If we have a service, try to match it
+        $serviceOffering = null;
+        if ($hasService && $serviceName) {
+            $availableServices = $this->getAvailableServices();
             $serviceOffering = $this->matchServiceToDatabase($serviceName, $availableServices);
-
+        }
+        
+        // If we have both service and datetime, create full extracted details
+        if ($hasService && $hasDatetime && $serviceName && $datetime && $serviceOffering) {
             if ($serviceOffering) {
                 try {
                     // Parse datetime assuming America/Chicago timezone if no timezone is specified
@@ -128,6 +135,42 @@ final readonly class ChatService
                 } catch (\Exception $e) {
                     // Invalid datetime, continue without extracted details
                 }
+            }
+        } elseif ($hasService && $serviceName && $serviceOffering) {
+            // Partial: We have service but not datetime
+            $extractedDetails = [
+                'service' => $serviceName,
+                'serviceOfferingId' => $serviceOffering->id,
+                'has_service' => true,
+                'has_datetime' => false,
+                'serviceOffering' => [
+                    'id' => $serviceOffering->id,
+                    'service' => [
+                        'id' => $serviceOffering->service->id,
+                        'name' => $serviceOffering->service->name,
+                        'description' => $serviceOffering->service->description,
+                    ],
+                    'doctor' => [
+                        'id' => $serviceOffering->doctor->id,
+                        'name' => $serviceOffering->doctor->display_name ?? trim("{$serviceOffering->doctor->first_name} {$serviceOffering->doctor->last_name}"),
+                    ],
+                    'facility' => [
+                        'id' => $serviceOffering->facility->id,
+                        'name' => $serviceOffering->facility->name,
+                    ],
+                ],
+            ];
+        } elseif ($hasDatetime && $datetime) {
+            // Partial: We have datetime but not service
+            try {
+                $parsedDatetime = Carbon::parse($datetime, 'America/Chicago')->setTimezone('America/Chicago');
+                $extractedDetails = [
+                    'datetime' => $parsedDatetime->toIso8601String(),
+                    'has_service' => false,
+                    'has_datetime' => true,
+                ];
+            } catch (\Exception $e) {
+                // Invalid datetime, continue without extracted details
             }
         }
 

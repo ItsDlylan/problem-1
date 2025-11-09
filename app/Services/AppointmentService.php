@@ -23,7 +23,8 @@ final readonly class AppointmentService
     public function createFromChat(array $details, Patient $patient): Appointment
     {
         $serviceOfferingId = $details['serviceOfferingId'];
-        $datetime = Carbon::parse($details['datetime']);
+        // Parse datetime and ensure it's in America/Chicago timezone
+        $datetime = Carbon::parse($details['datetime'], 'America/Chicago')->setTimezone('America/Chicago');
 
         // Validate service offering exists and is active
         $serviceOffering = ServiceOffering::with(['service', 'doctor', 'facility'])

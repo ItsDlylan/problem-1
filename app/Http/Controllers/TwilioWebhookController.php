@@ -10,6 +10,7 @@ use App\Services\AppointmentService;
 use App\Services\PatientIdentificationService;
 use App\Services\TwilioCallService;
 use App\Services\VoiceConversationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -116,12 +117,20 @@ final readonly class TwilioWebhookController
         
         $callSession = CallSession::where('call_sid', $callSid)->firstOrFail();
 
+        // Comprehensive logging for debugging
         Log::info('Voice input received', [
             'call_sid' => $callSid,
+            'call_status' => $callSession->status,
             'speech_result' => $speechResult,
+            'speech_result_type' => gettype($speechResult),
+            'speech_result_empty' => empty($speechResult),
             'dtmf_digits' => $dtmfDigits,
-            'input' => $input,
-            'status' => $callSession->status,
+            'dtmf_digits_type' => gettype($dtmfDigits),
+            'dtmf_digits_empty' => empty($dtmfDigits),
+            'final_input' => $input,
+            'all_request_inputs' => $request->all(),
+            'request_method' => $request->method(),
+            'request_headers' => $request->headers->all(),
         ]);
 
         $conversationState = $callSession->conversation_state ?? [];
@@ -386,27 +395,72 @@ final readonly class TwilioWebhookController
             $conversationHistory[] = ['role' => 'assistant', 'content' => $result['message']];
             $this->voiceConversationService->updateConversationHistory($callSession->call_sid, $conversationHistory);
 
-            // Check if we have appointment details ready for confirmation
+            // Handle partial or complete appointment details
             $extractedDetails = $result['extractedDetails'] ?? null;
+            $collectedInfo = $conversationState['collected_info'] ?? [];
 
-            if ($extractedDetails && isset($extractedDetails['serviceOfferingId']) && isset($extractedDetails['datetime'])) {
-                // Store extracted details in conversation state
-                $conversationState['appointment_details'] = $extractedDetails;
+            // Merge new information with previously collected information
+            if ($extractedDetails) {
+                if (isset($extractedDetails['serviceOfferingId'])) {
+                    $collectedInfo['serviceOfferingId'] = $extractedDetails['serviceOfferingId'];
+                    $collectedInfo['service'] = $extractedDetails['service'] ?? null;
+                    $collectedInfo['serviceOffering'] = $extractedDetails['serviceOffering'] ?? null;
+                    $collectedInfo['has_service'] = true;
+                }
+                
+                if (isset($extractedDetails['datetime'])) {
+                    $collectedInfo['datetime'] = $extractedDetails['datetime'];
+                    $collectedInfo['has_datetime'] = true;
+                }
+                
+                // Update conversation state with collected information
+                $conversationState['collected_info'] = $collectedInfo;
+                $callSession->update(['conversation_state' => $conversationState]);
+            }
+
+            // Check if we have complete appointment details ready for confirmation
+            if (isset($collectedInfo['serviceOfferingId']) && isset($collectedInfo['datetime']) && 
+                $collectedInfo['serviceOfferingId'] && $collectedInfo['datetime']) {
+                // Build complete appointment details from collected info
+                $completeDetails = [
+                    'service' => $collectedInfo['service'] ?? 'appointment',
+                    'datetime' => $collectedInfo['datetime'],
+                    'serviceOfferingId' => $collectedInfo['serviceOfferingId'],
+                    'serviceOffering' => $collectedInfo['serviceOffering'] ?? null,
+                ];
+                
+                // Store complete appointment details in conversation state
+                $conversationState['appointment_details'] = $completeDetails;
                 $callSession->update([
                     'status' => 'confirming',
                     'conversation_state' => $conversationState,
                 ]);
 
+                Log::info('Entering confirmation state', [
+                    'call_sid' => $callSession->call_sid,
+                    'appointment_details' => $completeDetails,
+                    'conversation_state' => $conversationState,
+                ]);
+
                 // Ask for confirmation
                 $response = new VoiceResponse();
-                $serviceName = $extractedDetails['service'] ?? 'appointment';
-                $datetime = $extractedDetails['datetime'] ?? '';
-                $formattedDate = $datetime ? date('l, F j, Y \a\t g:i A', strtotime($datetime)) : '';
+                $serviceName = $completeDetails['service'] ?? 'appointment';
+                $datetime = $completeDetails['datetime'] ?? '';
+                // Format datetime in America/Chicago timezone
+                $formattedDate = $datetime 
+                    ? Carbon::parse($datetime, 'America/Chicago')
+                        ->setTimezone('America/Chicago')
+                        ->format('l, F j, Y \a\t g:i A')
+                    : '';
 
-                $response->say(
-                    "I found a {$serviceName} appointment available on {$formattedDate}. Would you like to confirm this appointment? Please say yes or no.",
-                    ['voice' => 'alice']
-                );
+                $confirmationMessage = "I found a {$serviceName} appointment available on {$formattedDate}. Would you like to confirm this appointment? Please say yes or no.";
+                
+                Log::info('Sending confirmation prompt', [
+                    'call_sid' => $callSession->call_sid,
+                    'confirmation_message' => $confirmationMessage,
+                ]);
+
+                $response->say($confirmationMessage, ['voice' => 'alice']);
 
                 $gatherUrl = route('twilio.voice.gather', ['call_sid' => $callSession->call_sid]);
                 $response->gather([
@@ -458,17 +512,49 @@ final readonly class TwilioWebhookController
         ?string $speechResult,
         array $conversationState
     ): Response {
-        if (! $speechResult) {
+        // Detailed logging for confirmation state
+        Log::info('Confirmation state - input received', [
+            'call_sid' => $callSession->call_sid,
+            'speech_result_raw' => $speechResult,
+            'speech_result_type' => gettype($speechResult),
+            'speech_result_empty' => empty($speechResult),
+            'speech_result_is_null' => is_null($speechResult),
+            'speech_result_trimmed' => $speechResult ? trim($speechResult) : null,
+            'all_request_inputs' => $request->all(),
+            'conversation_state' => $conversationState,
+        ]);
+
+        if (! $speechResult || trim($speechResult) === '') {
+            Log::warning('Confirmation state - empty speech result', [
+                'call_sid' => $callSession->call_sid,
+                'speech_result' => $speechResult,
+                'request_all' => $request->all(),
+            ]);
+
             return $this->generateErrorResponse('I did not hear anything. Please say yes or no.');
         }
 
-        $input = strtolower(trim($speechResult));
+        // Use AI to interpret the confirmation response
+        $interpretation = $this->voiceConversationService->interpretConfirmationResponse($speechResult);
 
-        // Check for confirmation
-        $confirmed = in_array($input, ['yes', 'yeah', 'yep', 'sure', 'okay', 'ok', 'confirm'], true);
+        Log::info('Confirmation state - AI interpretation', [
+            'call_sid' => $callSession->call_sid,
+            'raw_input' => $speechResult,
+            'interpretation' => $interpretation,
+        ]);
 
-        if (! $confirmed && ! in_array($input, ['no', 'nope', 'cancel'], true)) {
+        $confirmed = $interpretation['is_confirmed'];
+        $denied = $interpretation['is_denied'];
+        $isUnclear = $interpretation['is_unclear'];
+
+        if ($isUnclear) {
             // Unclear response
+            Log::warning('Confirmation state - unclear response', [
+                'call_sid' => $callSession->call_sid,
+                'raw_speech' => $speechResult,
+                'interpretation' => $interpretation,
+            ]);
+
             $response = new VoiceResponse();
             $response->say('I did not understand. Please say yes to confirm or no to cancel.', ['voice' => 'alice']);
 
@@ -528,7 +614,12 @@ final readonly class TwilioWebhookController
             // Success message
             $serviceName = $appointmentDetails['service'] ?? 'appointment';
             $datetime = $appointmentDetails['datetime'] ?? '';
-            $formattedDate = $datetime ? date('l, F j, Y \a\t g:i A', strtotime($datetime)) : '';
+            // Format datetime in America/Chicago timezone
+            $formattedDate = $datetime 
+                ? Carbon::parse($datetime, 'America/Chicago')
+                    ->setTimezone('America/Chicago')
+                    ->format('l, F j, Y \a\t g:i A')
+                : '';
 
             $response = new VoiceResponse();
             $response->say(

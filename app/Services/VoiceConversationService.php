@@ -99,9 +99,10 @@ final readonly class VoiceConversationService
                 'response_format' => 'mp3',
             ]);
 
-            // Store the audio file
+            // Store the audio file - response is a stream, convert to string
             $audioPath = 'voice/tts_'.uniqid().'.mp3';
-            Storage::disk('public')->put($audioPath, $response);
+            $audioContent = is_string($response) ? $response : (string) $response;
+            Storage::disk('public')->put($audioPath, $audioContent);
 
             // Return the public URL
             return Storage::disk('public')->url($audioPath);
@@ -114,6 +115,150 @@ final readonly class VoiceConversationService
 
             throw new \RuntimeException('Failed to generate speech: '.$e->getMessage(), 0, $e);
         }
+    }
+
+    /**
+     * Interpret a yes/no response using AI to handle variations, punctuation, and natural language.
+     *
+     * @param  string  $response  The user's response (e.g., "Yes.", "yeah", "no way", etc.)
+     * @return array{is_confirmed: bool, is_denied: bool, is_unclear: bool, interpretation: string}
+     */
+    public function interpretConfirmationResponse(string $response): array
+    {
+        try {
+            $prompt = "You are interpreting a user's response to a yes/no question. The user was asked to confirm an appointment booking.
+
+User's response: \"{$response}\"
+
+Determine if this is:
+- A CONFIRMATION (yes, yeah, yep, sure, okay, ok, confirm, correct, that's right, absolutely, definitely, sounds good, etc.)
+- A DENIAL (no, nope, cancel, don't, not, wrong, incorrect, etc.)
+- UNCLEAR (anything else that doesn't clearly indicate yes or no)
+
+Respond with ONLY valid JSON in this exact format:
+{
+  \"is_confirmed\": true/false,
+  \"is_denied\": true/false,
+  \"is_unclear\": true/false,
+  \"interpretation\": \"brief explanation of why\"
+}
+
+Only one of is_confirmed, is_denied, or is_unclear should be true. If the response is clearly yes, set is_confirmed=true. If clearly no, set is_denied=true. Otherwise, set is_unclear=true.";
+
+            $messages = [
+                ['role' => 'system', 'content' => $prompt],
+            ];
+
+            $openAiResponse = OpenAI::chat()->create([
+                'model' => 'gpt-4o-mini',
+                'messages' => $messages,
+                'temperature' => 0.3, // Lower temperature for more consistent interpretation
+            ]);
+
+            $content = $openAiResponse->choices[0]->message->content;
+
+            // Extract JSON from response
+            $parsedContent = $this->extractJsonFromResponse($content);
+
+            if (! is_array($parsedContent)) {
+                Log::warning('Failed to parse AI confirmation interpretation', [
+                    'response' => $response,
+                    'ai_output' => $content,
+                ]);
+
+                // Fallback: try simple string matching
+                return $this->fallbackConfirmationInterpretation($response);
+            }
+
+            return [
+                'is_confirmed' => (bool) ($parsedContent['is_confirmed'] ?? false),
+                'is_denied' => (bool) ($parsedContent['is_denied'] ?? false),
+                'is_unclear' => (bool) ($parsedContent['is_unclear'] ?? false),
+                'interpretation' => $parsedContent['interpretation'] ?? 'Unable to interpret',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error interpreting confirmation response with AI', [
+                'response' => $response,
+                'error' => $e->getMessage(),
+            ]);
+
+            // Fallback to simple string matching if AI fails
+            return $this->fallbackConfirmationInterpretation($response);
+        }
+    }
+
+    /**
+     * Fallback confirmation interpretation using simple string matching.
+     *
+     * @param  string  $response
+     * @return array{is_confirmed: bool, is_denied: bool, is_unclear: bool, interpretation: string}
+     */
+    private function fallbackConfirmationInterpretation(string $response): array
+    {
+        $normalized = strtolower(trim($response));
+        // Remove punctuation
+        $normalized = preg_replace('/[^\w\s]/', '', $normalized);
+
+        $confirmations = ['yes', 'yeah', 'yep', 'sure', 'okay', 'ok', 'confirm', 'correct', 'right', 'absolutely', 'definitely'];
+        $denials = ['no', 'nope', 'cancel', 'dont', 'not', 'wrong', 'incorrect'];
+
+        $isConfirmed = false;
+        $isDenied = false;
+
+        foreach ($confirmations as $confirmation) {
+            if (str_contains($normalized, $confirmation)) {
+                $isConfirmed = true;
+                break;
+            }
+        }
+
+        foreach ($denials as $denial) {
+            if (str_contains($normalized, $denial)) {
+                $isDenied = true;
+                break;
+            }
+        }
+
+        return [
+            'is_confirmed' => $isConfirmed && ! $isDenied,
+            'is_denied' => $isDenied && ! $isConfirmed,
+            'is_unclear' => ! $isConfirmed && ! $isDenied,
+            'interpretation' => 'Fallback string matching',
+        ];
+    }
+
+    /**
+     * Extract JSON from AI response, handling cases where JSON is wrapped in markdown or other text.
+     *
+     * @param  string  $content
+     * @return array<string, mixed>|null
+     */
+    private function extractJsonFromResponse(string $content): ?array
+    {
+        // Try to find JSON in the response
+        // First, try to parse the entire content as JSON
+        $decoded = json_decode($content, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $decoded;
+        }
+
+        // Try to extract JSON from markdown code blocks
+        if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $content, $matches)) {
+            $decoded = json_decode($matches[1], true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        // Try to find JSON object in the text
+        if (preg_match('/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/', $content, $matches)) {
+            $decoded = json_decode($matches[0], true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return null;
     }
 
     /**
