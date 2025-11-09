@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\Facility\AvailabilityExceptionController;
 use App\Http\Controllers\Api\Facility\AvailabilityRuleController;
 use App\Http\Controllers\Api\Facility\AvailabilitySlotController;
 use App\Http\Controllers\Api\Facility\DoctorController;
@@ -24,6 +25,16 @@ Route::middleware(['auth:facility'])->group(function (): void {
     // Availability rules endpoints
     Route::get('/availability/rules', [AvailabilityRuleController::class, 'index'])
         ->name('api.facility.availability.rules');
+
+    // Availability exceptions endpoints
+    Route::get('/availability/exceptions', [AvailabilityExceptionController::class, 'index'])
+        ->name('api.facility.availability.exceptions.index');
+    Route::post('/availability/exceptions', [AvailabilityExceptionController::class, 'store'])
+        ->name('api.facility.availability.exceptions.store');
+    Route::put('/availability/exceptions/{id}', [AvailabilityExceptionController::class, 'update'])
+        ->name('api.facility.availability.exceptions.update');
+    Route::delete('/availability/exceptions/{id}', [AvailabilityExceptionController::class, 'destroy'])
+        ->name('api.facility.availability.exceptions.destroy');
 
     // Doctors endpoints
     Route::get('/doctors', [DoctorController::class, 'index'])

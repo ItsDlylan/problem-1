@@ -5,12 +5,16 @@
 
 import type {
     ApiResponse,
+    AvailabilityException,
     AvailabilityRule,
     AvailabilitySlot,
+    CreateAvailabilityExceptionParams,
     Doctor,
+    GetAvailabilityExceptionsParams,
     GetAvailabilityRulesParams,
     GetAvailabilitySlotsParams,
     PaginatedResponse,
+    UpdateAvailabilityExceptionParams,
 } from '@/types/facility';
 
 /**
@@ -43,6 +47,29 @@ function paramsToRecord(params: GetAvailabilitySlotsParams | GetAvailabilityRule
 }
 
 /**
+ * Get CSRF token from meta tag or cookie.
+ * Laravel stores CSRF token in meta tag and also in XSRF-TOKEN cookie.
+ */
+function getCsrfToken(): string | null {
+    // Try to get from meta tag first
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        return metaTag.getAttribute('content');
+    }
+    
+    // Fallback to cookie (Laravel stores it as XSRF-TOKEN)
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'XSRF-TOKEN') {
+            return decodeURIComponent(value);
+        }
+    }
+    
+    return null;
+}
+
+/**
  * Helper function to make authenticated API requests.
  * Includes CSRF token and session cookies automatically via browser.
  */
@@ -50,13 +77,24 @@ async function fetchApi<T>(
     endpoint: string,
     options: RequestInit = {},
 ): Promise<T> {
+    // Get CSRF token
+    const csrfToken = getCsrfToken();
+    
+    // Build headers with CSRF token for non-GET requests
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...options.headers,
+    };
+    
+    // Add CSRF token for POST, PUT, PATCH, DELETE requests
+    if (csrfToken && options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
+        headers['X-CSRF-TOKEN'] = csrfToken;
+    }
+    
     const response = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            ...options.headers,
-        },
+        headers,
         credentials: 'same-origin', // Include cookies for session auth
     });
 
@@ -131,5 +169,82 @@ export async function getDoctors(): Promise<ApiResponse<Doctor[]>> {
  */
 export async function getDoctor(id: number): Promise<ApiResponse<Doctor>> {
     return fetchApi<ApiResponse<Doctor>>(`/doctors/${id}`);
+}
+
+/**
+ * Fetch availability exceptions for the facility.
+ * Supports filtering by date range and doctor.
+ *
+ * @param params - Query parameters for filtering exceptions
+ * @returns Response with availability exceptions array
+ */
+export async function getAvailabilityExceptions(
+    params: GetAvailabilityExceptionsParams = {},
+): Promise<ApiResponse<AvailabilityException[]>> {
+    const queryString = buildQueryString(params as Record<string, unknown>);
+    return fetchApi<ApiResponse<AvailabilityException[]>>(
+        `/availability/exceptions${queryString}`,
+    );
+}
+
+/**
+ * Create an availability exception (blocked days) for a doctor.
+ * Doctors can only create exceptions for themselves.
+ * Receptionists and admins can create exceptions for any doctor in their facility.
+ *
+ * @param params - Parameters for creating the exception
+ * @returns Response with created availability exception
+ */
+export async function createAvailabilityException(
+    params: CreateAvailabilityExceptionParams,
+): Promise<ApiResponse<AvailabilityException>> {
+    return fetchApi<ApiResponse<AvailabilityException>>(
+        '/availability/exceptions',
+        {
+            method: 'POST',
+            body: JSON.stringify(params),
+        },
+    );
+}
+
+/**
+ * Update an availability exception.
+ * Doctors can only update exceptions for themselves.
+ * Receptionists and admins can update exceptions for any doctor in their facility.
+ *
+ * @param id - Exception ID
+ * @param params - Parameters for updating the exception
+ * @returns Response with updated availability exception
+ */
+export async function updateAvailabilityException(
+    id: number,
+    params: UpdateAvailabilityExceptionParams,
+): Promise<ApiResponse<AvailabilityException>> {
+    return fetchApi<ApiResponse<AvailabilityException>>(
+        `/availability/exceptions/${id}`,
+        {
+            method: 'PUT',
+            body: JSON.stringify(params),
+        },
+    );
+}
+
+/**
+ * Delete an availability exception (undo blocking).
+ * Doctors can only delete exceptions for themselves.
+ * Receptionists and admins can delete exceptions for any doctor in their facility.
+ *
+ * @param id - Exception ID
+ * @returns Response indicating success
+ */
+export async function deleteAvailabilityException(
+    id: number,
+): Promise<ApiResponse<void>> {
+    return fetchApi<ApiResponse<void>>(
+        `/availability/exceptions/${id}`,
+        {
+            method: 'DELETE',
+        },
+    );
 }
 

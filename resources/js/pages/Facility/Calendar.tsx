@@ -13,10 +13,26 @@ import AppLayout from '@/layouts/app-layout';
 import { DoctorScheduleCalendar } from '@/components/Facility/DoctorScheduleCalendar';
 import { CalendarFilters } from '@/components/Facility/CalendarFilters';
 import { AppointmentDetailsDialog } from '@/components/Facility/AppointmentDetailsDialog';
+import { CreateExceptionDialog } from '@/components/Facility/CreateExceptionDialog';
+import { EditExceptionDialog } from '@/components/Facility/EditExceptionDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { getAvailabilitySlots, getDoctors } from '@/services/facilityApi';
-import type { AvailabilitySlot, Doctor, CalendarEvent } from '@/types/facility';
+import { 
+    getAvailabilitySlots, 
+    getDoctors, 
+    createAvailabilityException,
+    getAvailabilityExceptions,
+    updateAvailabilityException,
+    deleteAvailabilityException,
+} from '@/services/facilityApi';
+import type { 
+    AvailabilityException,
+    AvailabilitySlot, 
+    Doctor, 
+    CalendarEvent, 
+    CreateAvailabilityExceptionParams,
+    UpdateAvailabilityExceptionParams,
+} from '@/types/facility';
 import type { BreadcrumbItem, SharedData } from '@/types';
 import type { FacilityUser } from '@/types/auth';
 
@@ -58,6 +74,7 @@ export default function Calendar() {
     
     // State for data
     const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+    const [exceptions, setExceptions] = useState<AvailabilityException[]>([]);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     
     // Loading and error states
@@ -67,6 +84,20 @@ export default function Calendar() {
     // Dialog state for appointment details
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    // Dialog state for creating availability exception (blocked days)
+    const [exceptionStartDate, setExceptionStartDate] = useState<Date | null>(null);
+    const [exceptionEndDate, setExceptionEndDate] = useState<Date | null>(null);
+    const [isExceptionDialogOpen, setIsExceptionDialogOpen] = useState(false);
+    const [isCreatingException, setIsCreatingException] = useState(false);
+    
+    // Dialog state for editing/deleting availability exception
+    const [selectedException, setSelectedException] = useState<AvailabilityException | null>(null);
+    const [isEditExceptionDialogOpen, setIsEditExceptionDialogOpen] = useState(false);
+    const [isUpdatingException, setIsUpdatingException] = useState(false);
+    
+    // Refresh trigger to force refetch after creating/updating/deleting exception
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Calculate date range based on current view
     const dateRange = useMemo(() => {
@@ -192,7 +223,33 @@ export default function Calendar() {
         }
 
         fetchSlots();
-    }, [dateRange.start_date, dateRange.end_date, selectedDoctorId, isDoctor]);
+    }, [dateRange.start_date, dateRange.end_date, selectedDoctorId, isDoctor, refreshTrigger]);
+
+    // Fetch availability exceptions when date range or doctor filter changes
+    useEffect(() => {
+        async function fetchExceptions() {
+            try {
+                const params = {
+                    ...dateRange,
+                    // Only include doctor_id if it's explicitly set (not null)
+                    ...(selectedDoctorId ? { doctor_id: selectedDoctorId } : {}),
+                };
+
+                const response = await getAvailabilityExceptions(params);
+                
+                if (response.success && response.data) {
+                    setExceptions(response.data);
+                } else {
+                    setExceptions([]);
+                }
+            } catch (err) {
+                console.error('Failed to fetch exceptions:', err);
+                setExceptions([]);
+            }
+        }
+
+        fetchExceptions();
+    }, [dateRange.start_date, dateRange.end_date, selectedDoctorId, isDoctor, refreshTrigger]);
 
     // Handle calendar navigation (date/view changes)
     // This is called by react-big-calendar when user interacts with the calendar
@@ -210,10 +267,179 @@ export default function Calendar() {
         // Keep the current date when switching views - don't auto-navigate to today
     };
 
-    // Handle event selection (when user clicks on a slot)
+    // Handle event selection (when user clicks on a slot or exception)
     const handleSelectEvent = (event: CalendarEvent) => {
-        setSelectedEvent(event);
-        setIsDialogOpen(true);
+        // Check if this is an exception (blocked period)
+        // Type guard: check if exceptionId exists in resource
+        const resource = event.resource as CalendarEvent['resource'] & { exceptionId?: number; exception?: AvailabilityException };
+        if (resource.status === 'blocked' && resource.exceptionId && resource.exception) {
+            // Open edit exception dialog
+            setSelectedException(resource.exception);
+            setIsEditExceptionDialogOpen(true);
+        } else {
+            // Open appointment details dialog for slots
+            setSelectedEvent(event);
+            setIsDialogOpen(true);
+        }
+    };
+
+    // Helper function to check if two date ranges overlap
+    const dateRangesOverlap = (start1: Date, end1: Date, start2: Date, end2: Date): boolean => {
+        // Two ranges overlap if: start1 <= end2 && start2 <= end1
+        return start1 <= end2 && start2 <= end1;
+    };
+
+    // Handle slot selection (when doctor drags to select days)
+    // Only works for doctors viewing their own calendar
+    const handleSelectSlot = (slotInfo: { start: Date; end: Date }) => {
+        if (!isDoctor || !userDoctorId) {
+            return; // Only doctors can create exceptions
+        }
+
+        // Normalize dates to start of day for comparison
+        // Use local date components to avoid timezone shifts
+        const selectedStart = new Date(slotInfo.start);
+        selectedStart.setHours(0, 0, 0, 0);
+        
+        const selectedEnd = new Date(slotInfo.end);
+        selectedEnd.setHours(0, 0, 0, 0);
+        
+        // Check if this is a single day selection
+        // If start and end are the same date, it's a single day
+        const isSingleDay = selectedStart.toDateString() === selectedEnd.toDateString();
+        
+        if (isSingleDay) {
+            // For single day, use the same date for both start and end
+            // End will be set to end of day when creating the exception
+            selectedEnd.setTime(selectedStart.getTime());
+        }
+
+        // Calculate the valid date range for the current view
+        // This prevents selecting off-range dates (previous/next month days)
+        let validStart: Date;
+        let validEnd: Date;
+        
+        switch (currentView) {
+            case 'week':
+                validStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+                validEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+                break;
+            case 'day':
+                validStart = startOfDay(currentDate);
+                validEnd = endOfDay(currentDate);
+                break;
+            case 'month':
+            default:
+                validStart = startOfMonth(currentDate);
+                validEnd = endOfMonth(currentDate);
+                break;
+        }
+
+        // Check if selected dates are within the valid range
+        // Allow selection if at least part of the range is within the current view
+        const isWithinRange = 
+            (selectedStart >= validStart && selectedStart <= validEnd) ||
+            (selectedEnd >= validStart && selectedEnd <= validEnd) ||
+            (selectedStart <= validStart && selectedEnd >= validEnd);
+
+        if (!isWithinRange) {
+            // Don't allow selection of dates outside the current view
+            console.log('Selection outside current view range, ignoring');
+            return;
+        }
+
+        // Clamp selected dates to valid range to prevent off-range selections
+        const clampedStart = selectedStart < validStart ? validStart : selectedStart;
+        const clampedEnd = selectedEnd > validEnd ? validEnd : selectedEnd;
+
+        // Check if the selected date range overlaps with any existing exceptions
+        const overlappingException = exceptions.find((exception) => {
+            const exceptionStart = new Date(exception.start_at);
+            const exceptionEnd = new Date(exception.end_at);
+            
+            return dateRangesOverlap(
+                clampedStart,
+                clampedEnd,
+                exceptionStart,
+                exceptionEnd
+            );
+        });
+
+        if (overlappingException) {
+            // If there's an overlapping exception, open the edit dialog instead
+            setSelectedException(overlappingException);
+            setIsEditExceptionDialogOpen(true);
+        } else {
+            // If no overlap, open the create dialog
+            setExceptionStartDate(clampedStart);
+            setExceptionEndDate(clampedEnd);
+            setIsExceptionDialogOpen(true);
+        }
+    };
+
+    // Handle creating availability exception
+    const handleCreateException = async (params: CreateAvailabilityExceptionParams) => {
+        setIsCreatingException(true);
+        try {
+            const response = await createAvailabilityException(params);
+            if (response.success) {
+                // Close the dialog and reset state
+                setIsExceptionDialogOpen(false);
+                setExceptionStartDate(null);
+                setExceptionEndDate(null);
+                
+                // Refresh the calendar to show the new exception
+                // Trigger a refetch by incrementing the refresh trigger
+                setRefreshTrigger((prev) => prev + 1);
+            } else {
+                throw new Error(response.message || 'Failed to create exception');
+            }
+        } catch (err) {
+            throw err; // Let the dialog handle the error display
+        } finally {
+            setIsCreatingException(false);
+        }
+    };
+
+    // Handle updating availability exception
+    const handleUpdateException = async (id: number, params: UpdateAvailabilityExceptionParams) => {
+        setIsUpdatingException(true);
+        try {
+            const response = await updateAvailabilityException(id, params);
+            if (response.success) {
+                // Close the dialog and reset state
+                setIsEditExceptionDialogOpen(false);
+                setSelectedException(null);
+                
+                // Refresh the calendar to show the updated exception
+                setRefreshTrigger((prev) => prev + 1);
+            } else {
+                throw new Error(response.message || 'Failed to update exception');
+            }
+        } catch (err) {
+            throw err; // Let the dialog handle the error display
+        } finally {
+            setIsUpdatingException(false);
+        }
+    };
+
+    // Handle deleting availability exception
+    const handleDeleteException = async (id: number) => {
+        try {
+            const response = await deleteAvailabilityException(id);
+            if (response.success) {
+                // Close the dialog and reset state
+                setIsEditExceptionDialogOpen(false);
+                setSelectedException(null);
+                
+                // Refresh the calendar to show the exception is removed
+                setRefreshTrigger((prev) => prev + 1);
+            } else {
+                throw new Error(response.message || 'Failed to delete exception');
+            }
+        } catch (err) {
+            throw err; // Let the dialog handle the error display
+        }
     };
 
     // Handle doctor filter change
@@ -248,7 +474,7 @@ export default function Calendar() {
                                 </h1>
                                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                                     {isDoctor
-                                        ? 'View and manage your availability slots for the current month.'
+                                        ? 'View and manage your availability slots for the current month. Drag over days to block availability.'
                                         : 'View and manage doctor availability slots for the current month. Slots are color-coded by doctor.'}
                                 </p>
                             </div>
@@ -285,10 +511,12 @@ export default function Calendar() {
                             ) : (
                                 <DoctorScheduleCalendar
                                     slots={slots}
+                                    exceptions={exceptions}
                                     currentDate={currentDate}
                                     currentView={currentView}
                                     onNavigate={handleNavigate}
                                     onSelectEvent={handleSelectEvent}
+                                    onSelectSlot={handleSelectSlot}
                                     isOwnCalendar={isDoctor}
                                 />
                             )}
@@ -317,9 +545,14 @@ export default function Calendar() {
                                         <div className="h-4 w-4 rounded border bg-gray-500/50" />
                                         <span className="text-foreground">Cancelled</span>
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-4 w-4 rounded border bg-gray-600/80" />
+                                        <span className="text-foreground">Blocked</span>
+                                    </div>
                                 </div>
                                 <p className="mt-2 text-xs text-muted-foreground">
-                                    Slots show appointment status when booked. Click on a slot to view details.
+                                    Slots show appointment status when booked. Click on a slot to view details. 
+                                    {isDoctor && ' Click on blocked periods to edit or remove them.'}
                                 </p>
                             </div>
                         </div>
@@ -334,6 +567,31 @@ export default function Calendar() {
                 onOpenChange={setIsDialogOpen}
                 isOwnCalendar={isDoctor}
             />
+
+            {/* Create Exception Dialog - Only shown for doctors */}
+            {isDoctor && userDoctorId && (
+                <CreateExceptionDialog
+                    open={isExceptionDialogOpen}
+                    onOpenChange={setIsExceptionDialogOpen}
+                    startDate={exceptionStartDate}
+                    endDate={exceptionEndDate}
+                    doctorId={userDoctorId}
+                    onSubmit={handleCreateException}
+                    isLoading={isCreatingException}
+                />
+            )}
+
+            {/* Edit Exception Dialog - Only shown for doctors */}
+            {isDoctor && (
+                <EditExceptionDialog
+                    open={isEditExceptionDialogOpen}
+                    onOpenChange={setIsEditExceptionDialogOpen}
+                    exception={selectedException}
+                    onUpdate={handleUpdateException}
+                    onDelete={handleDeleteException}
+                    isLoading={isUpdatingException}
+                />
+            )}
         </AppLayout>
     );
 }

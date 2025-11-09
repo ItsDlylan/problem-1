@@ -122,18 +122,20 @@ export interface Appointment {
  * Transformed from AvailabilitySlot for display.
  */
 export interface CalendarEvent {
-    id: number;
+    id: number | string; // Can be slot ID or exception ID string
     title: string;
     start: Date;
     end: Date;
     resource: {
         doctorId: number;
         doctorName: string;
-        slotId: number;
-        status: AvailabilitySlot['status'] | 'no_show' | 'completed' | 'cancelled' | 'scheduled' | 'checked_in' | 'in_progress';
+        slotId?: number;
+        exceptionId?: number; // ID of the exception if this is a blocked period
+        status: AvailabilitySlot['status'] | 'no_show' | 'completed' | 'cancelled' | 'scheduled' | 'checked_in' | 'in_progress' | 'blocked';
         slotStatus?: AvailabilitySlot['status']; // Original slot status
-        serviceOfferingId: number | null;
+        serviceOfferingId?: number | null;
         slot?: AvailabilitySlot; // Full slot data for details view
+        exception?: AvailabilityException; // Full exception data for edit view
     };
 }
 
@@ -152,6 +154,57 @@ export interface GetAvailabilitySlotsParams {
  * Parameters for fetching availability rules.
  */
 export interface GetAvailabilityRulesParams {
+    doctor_id?: number;
+}
+
+/**
+ * Availability exception represents blocked or modified availability periods.
+ */
+export interface AvailabilityException {
+    id: number;
+    availability_rule_id: number | null;
+    facility_id: number;
+    doctor_id: number;
+    start_at: string; // ISO datetime string
+    end_at: string; // ISO datetime string
+    type: 'blocked' | 'override' | 'emergency';
+    meta: {
+        reason?: string;
+    } | null;
+    created_at: string;
+    updated_at: string;
+    // Relationships (loaded via API)
+    doctor?: Doctor;
+}
+
+/**
+ * Parameters for creating an availability exception.
+ */
+export interface CreateAvailabilityExceptionParams {
+    doctor_id: number;
+    start_at: string; // ISO datetime string
+    end_at: string; // ISO datetime string
+    type?: 'blocked' | 'override' | 'emergency';
+    reason?: string;
+    availability_rule_id?: number | null;
+}
+
+/**
+ * Parameters for updating an availability exception.
+ */
+export interface UpdateAvailabilityExceptionParams {
+    start_at?: string; // ISO datetime string
+    end_at?: string; // ISO datetime string
+    type?: 'blocked' | 'override' | 'emergency';
+    reason?: string;
+}
+
+/**
+ * Parameters for fetching availability exceptions.
+ */
+export interface GetAvailabilityExceptionsParams {
+    start_date?: string; // YYYY-MM-DD format
+    end_date?: string; // YYYY-MM-DD format
     doctor_id?: number;
 }
 
