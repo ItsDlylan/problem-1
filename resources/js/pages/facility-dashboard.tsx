@@ -1,6 +1,6 @@
 import { Head, Link } from "@inertiajs/react";
 import { format } from "date-fns";
-import { Calendar, Settings, Clock, Users, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Calendar, Clock, Users, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import AppLayout from "@/layouts/app-layout";
 import { type BreadcrumbItem } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -109,22 +109,6 @@ export default function Dashboard({ todayStats, upcomingAppointments }: Dashboar
                         <div className="flex-1">
                           <CardTitle>Calendar</CardTitle>
                           <CardDescription>View and manage schedules</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Link>
-                </Card>
-
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <Link href="/settings/profile" className="block">
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-gray-100 p-3 dark:bg-gray-800">
-                          <Settings className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-                        </div>
-                        <div className="flex-1">
-                          <CardTitle>Settings</CardTitle>
-                          <CardDescription>Manage your profile and preferences</CardDescription>
                         </div>
                       </div>
                     </CardHeader>
