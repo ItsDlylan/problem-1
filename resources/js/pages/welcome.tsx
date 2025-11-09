@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AppLogoIcon from "@/components/app-logo-icon";
 
 // Register ScrollTrigger plugin - this enables scroll-based animations
 gsap.registerPlugin(ScrollTrigger);
@@ -24,6 +25,7 @@ export default function Welcome() {
   const featureCardsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
   const doctorImageRef = useRef<HTMLDivElement>(null);
+  const penguinImageRef = useRef<HTMLImageElement>(null);
   const hospitalsRef = useRef<HTMLDivElement>(null);
   const patientsRef = useRef<HTMLDivElement>(null);
   const appointmentsRef = useRef<HTMLDivElement>(null);
@@ -123,6 +125,31 @@ export default function Welcome() {
         yoyo: true,
         repeat: -1,
       });
+
+      // Animate penguin doctor image with subtle, organic movements
+      // Create a gentle breathing/swaying effect
+      if (penguinImageRef.current) {
+        // Main body sway - gentle side-to-side movement
+        gsap.to(penguinImageRef.current, {
+          rotation: 2,
+          transformOrigin: "center bottom",
+          duration: 3,
+          ease: "sine.inOut",
+          yoyo: true,
+          repeat: -1,
+        });
+
+        // Subtle vertical breathing effect - makes it feel alive
+        gsap.to(penguinImageRef.current, {
+          y: -8,
+          scale: 1.02,
+          transformOrigin: "center center",
+          duration: 2.5,
+          ease: "sine.inOut",
+          yoyo: true,
+          repeat: -1,
+        });
+      }
     });
 
     return () => ctx.revert();
@@ -275,54 +302,63 @@ export default function Welcome() {
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-[#FFF8F0] via-[#FDFDFC] to-[#FFF5E6] text-[#1b1b18] dark:from-[#0a0a0a] dark:via-[#161615] dark:to-[#1a1a18]">
         {/* Navigation */}
-        <header className="fixed top-0 z-50 w-full border-b border-[#19140015] bg-white/80 backdrop-blur-sm dark:border-[#3E3E3A] dark:bg-[#161615]/80">
+        <header className="fixed top-0 z-[100] w-full border-b border-[#19140015] bg-white/90 backdrop-blur-md dark:border-[#3E3E3A] dark:bg-[#161615]/90">
           <nav className="container mx-auto flex items-center justify-between px-6 py-4 lg:px-8">
             <div className="text-xl font-semibold text-[#1b1b18] dark:text-[#EDEDEC]">
               MedAI
             </div>
-            {!auth.user && (
-              <div className="flex items-center gap-4">
-                {/* Login Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-lg border border-transparent px-5 py-2 text-sm font-medium text-[#1b1b18] transition-all hover:border-[#19140035] hover:bg-[#FDFDFC] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A] dark:hover:bg-[#161615]">
-                    Log in
-                    <ChevronDownIcon className="h-4 w-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[180px]">
-                    <DropdownMenuItem asChild>
-                      <Link href="/patient/login" className="cursor-pointer">
-                        Login as Patient
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/facility/login" className="cursor-pointer">
-                        Login as Facility
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            <div className="flex items-center gap-4">
+              {!auth?.user ? (
+                <>
+                  {/* Login Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-lg border border-transparent bg-transparent px-5 py-2 text-sm font-medium text-[#1b1b18] transition-all hover:border-[#19140035] hover:bg-[#FDFDFC] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A] dark:hover:bg-[#161615]">
+                      Log in
+                      <ChevronDownIcon className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="z-[200] min-w-[180px] bg-white dark:bg-[#161615]">
+                      <DropdownMenuItem asChild>
+                        <Link href="/patient/login" className="cursor-pointer w-full">
+                          Login as Patient
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/facility/login" className="cursor-pointer w-full">
+                          Login as Facility
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-                {/* Register Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-lg border border-[#19140035] bg-[#1b1b18] px-5 py-2 text-sm font-medium text-white transition-all hover:bg-black dark:border-[#3E3E3A] dark:bg-[#EDEDEC] dark:text-[#1C1C1A] dark:hover:bg-white">
-                    Register
-                    <ChevronDownIcon className="h-4 w-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[180px]">
-                    <DropdownMenuItem asChild>
-                      <Link href="/patient/register" className="cursor-pointer">
-                        Register as Patient
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/facility/register" className="cursor-pointer">
-                        Register as Facility
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
+                  {/* Register Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-lg border border-[#19140035] bg-[#1b1b18] px-5 py-2 text-sm font-medium text-white transition-all hover:bg-black dark:border-[#3E3E3A] dark:bg-[#EDEDEC] dark:text-[#1C1C1A] dark:hover:bg-white">
+                      Register
+                      <ChevronDownIcon className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="z-[200] min-w-[180px] bg-white dark:bg-[#161615]">
+                      <DropdownMenuItem asChild>
+                        <Link href="/patient/register" className="cursor-pointer w-full">
+                          Register as Patient
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/facility/register" className="cursor-pointer w-full">
+                          Register as Facility
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <Link
+                  href={auth.userType === 'patient' ? '/patient/dashboard' : '/facility/dashboard'}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#19140035] bg-[#1b1b18] px-5 py-2 text-sm font-medium text-white transition-all hover:bg-black dark:border-[#3E3E3A] dark:bg-[#EDEDEC] dark:text-[#1C1C1A] dark:hover:bg-white"
+                >
+                  Dashboard
+                </Link>
+              )}
+            </div>
           </nav>
         </header>
 
@@ -365,164 +401,38 @@ export default function Welcome() {
                         className="group inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#F53003] to-[#FF750F] px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:scale-110 hover:shadow-2xl dark:from-[#FF4433] dark:to-[#FF9500]"
                       >
                         Get Started
-                        <svg
-                          className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 7l5 5m0 0l-5 5m5-5H6"
-                          />
-                        </svg>
+                        <AppLogoIcon className="h-6 w-6 transition-transform group-hover:translate-x-1 group-hover:scale-110" />
                       </Link>
                       <Link
                         href="/patient/login"
-                        className="inline-flex items-center justify-center rounded-lg border-2 border-[#19140035] bg-white px-8 py-4 text-lg font-semibold text-[#1b1b18] transition-all hover:border-[#1915014a] hover:bg-[#FDFDFC] hover:scale-105 dark:border-[#3E3E3A] dark:bg-[#161615] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                        className="group inline-flex items-center justify-center gap-2 rounded-lg border-2 border-[#19140035] bg-white px-8 py-4 text-lg font-semibold text-[#1b1b18] transition-all hover:border-[#1915014a] hover:bg-[#FDFDFC] hover:scale-105 dark:border-[#3E3E3A] dark:bg-[#161615] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                       >
                         View Calendar
+                        <AppLogoIcon className="h-5 w-5 transition-transform group-hover:scale-110" />
                       </Link>
                     </>
                   ) : (
                     <Link
-                      href="/patient/dashboard"
+                      href={auth.userType === 'patient' ? '/patient/dashboard' : '/facility/dashboard'}
                       className="group inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#F53003] to-[#FF750F] px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:scale-110 hover:shadow-2xl dark:from-[#FF4433] dark:to-[#FF9500]"
                     >
                       Go to Dashboard
-                      <svg
-                        className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 7l5 5m0 0l-5 5m5-5H6"
-                        />
-                      </svg>
+                      <AppLogoIcon className="h-6 w-6 transition-transform group-hover:translate-x-1 group-hover:scale-110" />
                     </Link>
                   )}
                 </div>
               </div>
 
-              {/* Right side - Doctor illustration */}
-              <div ref={doctorImageRef} className="relative hidden lg:block">
-                <div className="relative">
-                  {/* Doctor SVG Illustration */}
-                  <svg
-                    viewBox="0 0 400 500"
-                    className="h-full w-full max-w-md"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Doctor figure */}
-                    <g>
-                      {/* Head */}
-                      <circle
-                        cx="200"
-                        cy="120"
-                        r="50"
-                        fill="#FFE5D9"
-                        className="dark:fill-[#3E3E3A]"
-                      />
-                      {/* Body */}
-                      <rect
-                        x="150"
-                        y="170"
-                        width="100"
-                        height="200"
-                        rx="10"
-                        fill="#4A90E2"
-                        className="dark:fill-[#4A90E2]"
-                      />
-                      {/* Stethoscope */}
-                      <path
-                        d="M180 200 Q200 190 220 200"
-                        stroke="#1b1b18"
-                        strokeWidth="3"
-                        fill="none"
-                        className="dark:stroke-[#EDEDEC]"
-                      />
-                      <circle
-                        cx="200"
-                        cy="220"
-                        r="15"
-                        fill="none"
-                        stroke="#1b1b18"
-                        strokeWidth="3"
-                        className="dark:stroke-[#EDEDEC]"
-                      />
-                      {/* Arms */}
-                      <rect
-                        x="130"
-                        y="200"
-                        width="30"
-                        height="100"
-                        rx="15"
-                        fill="#FFE5D9"
-                        className="dark:fill-[#3E3E3A]"
-                      />
-                      <rect
-                        x="240"
-                        y="200"
-                        width="30"
-                        height="100"
-                        rx="15"
-                        fill="#FFE5D9"
-                        className="dark:fill-[#3E3E3A]"
-                      />
-                      {/* Legs */}
-                      <rect
-                        x="160"
-                        y="370"
-                        width="25"
-                        height="80"
-                        rx="12"
-                        fill="#2C3E50"
-                        className="dark:fill-[#2C3E50]"
-                      />
-                      <rect
-                        x="215"
-                        y="370"
-                        width="25"
-                        height="80"
-                        rx="12"
-                        fill="#2C3E50"
-                        className="dark:fill-[#2C3E50]"
-                      />
-                      {/* Medical cross badge */}
-                      <circle
-                        cx="200"
-                        cy="250"
-                        r="20"
-                        fill="#F53003"
-                        className="dark:fill-[#FF4433]"
-                      />
-                      <path
-                        d="M200 240 L200 260 M190 250 L210 250"
-                        stroke="white"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                      />
-                    </g>
-                  </svg>
-
-                  {/* Floating elements around doctor */}
-                  <div className="absolute -left-10 top-20 animate-bounce">
-                    <div className="rounded-full bg-gradient-to-br from-[#F53003] to-[#FF750F] p-3 shadow-lg dark:from-[#FF4433] dark:to-[#FF9500]">
-                      <Calendar className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                  <div className="absolute -right-10 top-40 animate-bounce" style={{ animationDelay: "0.5s" }}>
-                    <div className="rounded-full bg-gradient-to-br from-[#F53003] to-[#FF750F] p-3 shadow-lg dark:from-[#FF4433] dark:to-[#FF9500]">
-                      <Users className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
+              {/* Right side - Penguin Doctor illustration */}
+              <div ref={doctorImageRef} className="relative flex items-center justify-center lg:block">
+                <div className="relative w-full">
+                  {/* Penguin Doctor Image */}
+                  <img
+                    ref={penguinImageRef}
+                    src="/penguin_transparent.png"
+                    alt="Friendly penguin doctor with stethoscope"
+                    className="mx-auto h-auto w-full max-w-md object-contain drop-shadow-2xl"
+                  />
                 </div>
               </div>
             </div>
@@ -858,19 +768,7 @@ export default function Welcome() {
                   className="group inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#F53003] to-[#FF750F] px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:scale-110 hover:shadow-2xl dark:from-[#FF4433] dark:to-[#FF9500]"
                 >
                   Start Your Journey Today
-                  <svg
-                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 7l5 5m0 0l-5 5m5-5H6"
-                    />
-                  </svg>
+                  <AppLogoIcon className="h-6 w-6 transition-transform group-hover:translate-x-1 group-hover:scale-110" />
                 </Link>
               )}
             </div>

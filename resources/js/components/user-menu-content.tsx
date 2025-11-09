@@ -31,9 +31,12 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
         : edit().url;
     
     // Determine logout URL based on user type
-    // Patients use /patient/logout, facility users use /logout
+    // Patients use /patient/logout, facility users use /facility/logout
+    // Regular users (User model) use /logout
     const logoutUrl = auth.userType === 'patient'
         ? '/patient/logout'
+        : auth.userType === 'facility'
+        ? '/facility/logout'
         : logout().url;
 
     const handleLogout = (e: React.MouseEvent) => {
