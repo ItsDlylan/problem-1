@@ -25,6 +25,7 @@ use Illuminate\Notifications\Notifiable;
  * @property-read string|null $phone
  * @property-read string|null $dob
  * @property-read int|null $default_insurance_plan_id
+ * @property-read string|null $insurance_card_number
  * @property-read string|null $preferred_language
  * @property-read array|null $meta
  * @property-read CarbonInterface $created_at
@@ -52,6 +53,7 @@ final class Patient extends Authenticatable implements MustVerifyEmail
         'phone',
         'dob',
         'default_insurance_plan_id',
+        'insurance_card_number',
         'preferred_language',
         'meta',
     ];
@@ -78,6 +80,7 @@ final class Patient extends Authenticatable implements MustVerifyEmail
         'phone' => 'string',
         'dob' => 'date',
         'default_insurance_plan_id' => 'integer',
+        'insurance_card_number' => 'string',
         'preferred_language' => 'string',
         'meta' => 'array',
         'created_at' => 'datetime',

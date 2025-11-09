@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'guest.patient' => RedirectIfPatientAuthenticated::class,
             'guest.facility' => RedirectIfFacilityAuthenticated::class,
+            'twilio.webhook' => \App\Http\Middleware\ValidateTwilioWebhook::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

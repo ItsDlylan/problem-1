@@ -37,4 +37,13 @@ return [
         ],
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'phone_number' => env('TWILIO_PHONE_NUMBER'),
+        // Set to false in local development to skip webhook signature validation
+        // (useful when using ngrok where signature validation can fail)
+        'validate_webhooks' => env('TWILIO_VALIDATE_WEBHOOKS', true),
+    ],
+
 ];
