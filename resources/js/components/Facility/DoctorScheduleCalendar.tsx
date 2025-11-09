@@ -3,7 +3,8 @@
  * Uses react-big-calendar to show individual time slots color-coded by doctor.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
+import type React from 'react';
 import { Calendar, dateFnsLocalizer, View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, startOfWeek as getStartOfWeek, endOfWeek as getEndOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
@@ -69,21 +70,31 @@ function transformSlotsToEvents(slots: AvailabilitySlot[], isOwnCalendar = false
         // If slot has appointments, use the first appointment's status (for display purposes)
         // This allows us to show "no_show" status for appointments
         let displayStatus = slot.status;
-        if (slot.appointments && slot.appointments.length > 0) {
+        const firstAppointment = slot.appointments && slot.appointments.length > 0 ? slot.appointments[0] : null;
+        if (firstAppointment) {
             // Use the appointment status if it's more specific (e.g., no_show, completed)
-            const appointmentStatus = slot.appointments[0].status;
+            const appointmentStatus = firstAppointment.status;
             // Map appointment statuses to display statuses
             if (['no_show', 'completed', 'cancelled', 'checked_in', 'in_progress'].includes(appointmentStatus)) {
                 displayStatus = appointmentStatus;
             }
         }
 
-        // For doctors viewing their own calendar, show just the status for "open" slots
-        // For other statuses or when viewing other doctors, show doctor name
+        // Determine the title to display based on context
+        // For doctors viewing their own calendar:
+        // - Show patient name for booked slots (when appointments exist)
+        // - Show just the status for "open" slots
+        // For other doctors or when not viewing own calendar, show doctor name
         let title: string;
         if (isOwnCalendar && displayStatus === 'open') {
+            // Open slots show just the status
             title = displayStatus;
+        } else if (isOwnCalendar && firstAppointment && firstAppointment.patient) {
+            // When viewing own calendar and slot has appointments, show patient name
+            const patientName = `${firstAppointment.patient.first_name} ${firstAppointment.patient.last_name}`;
+            title = `${patientName} (${displayStatus})`;
         } else {
+            // Default: show doctor name (for other doctors or when not viewing own calendar)
             title = `${doctorName}${serviceName} (${displayStatus})`;
         }
 
@@ -175,14 +186,15 @@ function eventStyleGetter(event: CalendarEvent) {
             color: '#fff',
             borderRadius: '4px',
             border: '2px solid',
-            padding: '4px 6px',
+            padding: '6px 8px', // Increased padding for better spacing when multiple events on same day
             fontSize: '12px',
             fontWeight,
-            minHeight: '20px',
+            minHeight: '24px', // Increased min-height for better visibility
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             cursor: 'pointer',
+            marginBottom: '2px', // Add small margin between stacked events
         },
     };
 }
@@ -195,6 +207,7 @@ interface DoctorScheduleCalendarProps {
     onNavigate: (date: Date, view: View) => void;
     onSelectEvent?: (event: CalendarEvent) => void;
     onSelectSlot?: (slotInfo: { start: Date; end: Date }) => void; // Handler for drag selection
+    onDayClick?: (date: Date) => void; // Handler for clicking on a day cell
     isOwnCalendar?: boolean; // If true, doctor is viewing their own calendar
 }
 
@@ -211,8 +224,14 @@ export function DoctorScheduleCalendar({
     onNavigate,
     onSelectEvent,
     onSelectSlot,
+    onDayClick,
     isOwnCalendar = false,
 }: DoctorScheduleCalendarProps) {
+    // Ref to the calendar container to attach event listeners
+    const calendarRef = useRef<HTMLDivElement>(null);
+    // Flag to track if a date cell was clicked (to prevent onSelectSlot from firing)
+    const dateCellClickedRef = useRef(false);
+
     // Transform slots and exceptions into calendar events
     // Pass isOwnCalendar flag to show just "open" for open slots when viewing own calendar
     const slotEvents = useMemo(() => transformSlotsToEvents(slots, isOwnCalendar), [slots, isOwnCalendar]);
@@ -221,6 +240,86 @@ export function DoctorScheduleCalendar({
     // Combine slot events and exception events
     // Exceptions should appear on top (rendered last) so they're more visible
     const events = useMemo(() => [...slotEvents, ...exceptionEvents], [slotEvents, exceptionEvents]);
+
+    // Attach click handlers to date cells using event delegation
+    // This ensures date numbers are clickable
+    useEffect(() => {
+        if (!onDayClick || !calendarRef.current || currentView !== 'month') return;
+
+        const handleClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            
+            // Check if click is on a date cell
+            const dateCell = target.closest('.rbc-date-cell');
+            if (!dateCell) return;
+
+            // Don't handle clicks on events
+            if (target.closest('.rbc-event')) return;
+
+            // Mark that a date cell was clicked to prevent onSelectSlot from firing
+            dateCellClickedRef.current = true;
+            
+            // Stop propagation to prevent other handlers from firing
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Reset the flag after a short delay to allow the day click to process
+            setTimeout(() => {
+                dateCellClickedRef.current = false;
+            }, 100);
+
+            // Prevent default if it's a link
+            if (target.tagName === 'A' || target.closest('a')) {
+                // Already prevented above
+            }
+
+            // Get date number from cell text
+            const dateText = (dateCell as HTMLElement).textContent?.trim();
+            if (!dateText) return;
+
+            const dayNumber = parseInt(dateText, 10);
+            if (isNaN(dayNumber) || dayNumber < 1 || dayNumber > 31) return;
+
+            // Date cells are in header rows above day slots
+            // Find the header row and get column index (day of week)
+            const headerRow = dateCell.closest('.rbc-row') || dateCell.closest('tr') || dateCell.parentElement;
+            if (!headerRow) return;
+
+            const allDateCells = headerRow.querySelectorAll('.rbc-date-cell');
+            const columnIndex = Array.from(allDateCells).indexOf(dateCell as Element);
+            if (columnIndex < 0) return;
+
+            // Find which week row this header belongs to by finding the corresponding month row
+            // Date cells are typically in rows that correspond to week rows
+            const monthRows = Array.from(calendarRef.current!.querySelectorAll('.rbc-month-row'));
+            
+            // Calculate date from grid position
+            const monthStart = startOfMonth(currentDate);
+            const firstDayOfWeek = getDay(monthStart); // 0 = Sunday
+            
+            // Find the week row index by checking which month row's date matches
+            // We iterate through possible week rows to find the one where this column matches dayNumber
+            for (let rowIndex = 0; rowIndex < monthRows.length; rowIndex++) {
+                const daysFromStart = (rowIndex * 7) + columnIndex - firstDayOfWeek;
+                const testDate = new Date(monthStart);
+                testDate.setDate(testDate.getDate() + daysFromStart);
+                
+                // Check if this date matches the day number we're looking for
+                // Also check it's in the current month (or adjacent months shown in calendar)
+                if (testDate.getDate() === dayNumber) {
+                    onDayClick(testDate);
+                    return;
+                }
+            }
+        };
+
+        const calendar = calendarRef.current;
+        calendar.addEventListener('click', handleClick, true);
+
+        return () => {
+            calendar.removeEventListener('click', handleClick, true);
+        };
+    }, [onDayClick, currentDate, currentView]);
 
     // Handle event click
     const handleSelectEvent = (event: CalendarEvent) => {
@@ -232,6 +331,12 @@ export function DoctorScheduleCalendar({
     // Handle slot selection (drag to select days)
     // Only enable for doctors viewing their own calendar
     const handleSelectSlot = (slotInfo: { start: Date; end: Date }) => {
+        // Don't handle slot selection if a date cell was just clicked
+        // Date cell clicks should only open DayEventsDialog, not block availability
+        if (dateCellClickedRef.current) {
+            return;
+        }
+        
         if (onSelectSlot && isOwnCalendar) {
             // Normalize dates to start of day for consistency
             const start = new Date(slotInfo.start);
@@ -281,6 +386,40 @@ export function DoctorScheduleCalendar({
     // We use our own custom controls instead
     const Toolbar = () => null;
 
+    // Custom date cell wrapper to handle day clicks on day slot backgrounds
+    // Note: Date cell clicks are handled separately via useEffect event delegation
+    const DateCellWrapper = ({ children, value }: { children: React.ReactNode; value: Date }) => {
+        const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+            // Check if the click is on an event - if so, don't handle it
+            const target = e.target as HTMLElement;
+            const isEvent = target.closest('.rbc-event');
+            const isEventContent = target.closest('.rbc-event-content');
+            const isDateCell = target.closest('.rbc-date-cell');
+            
+            // Don't handle clicks on events or date cells (date cells handled separately)
+            if (isEvent || isEventContent || isDateCell) {
+                return;
+            }
+
+            // Handle clicks on day background/empty areas
+            e.preventDefault();
+            e.stopPropagation();
+            if (onDayClick) {
+                onDayClick(value);
+            }
+        };
+
+        return (
+            <div 
+                onClick={handleClick} 
+                className="rbc-day-cell-wrapper" 
+                style={{ cursor: 'pointer', height: '100%', width: '100%', position: 'relative' }}
+            >
+                {children}
+            </div>
+        );
+    };
+
     // Custom day prop getter to mark off-range days
     // The actual selection prevention is handled in the parent component's handleSelectSlot
     const dayPropGetter = (date: Date) => {
@@ -316,7 +455,7 @@ export function DoctorScheduleCalendar({
     };
 
     return (
-        <div className="h-[600px] w-full rounded-lg border bg-card p-4">
+        <div ref={calendarRef} className="h-[600px] w-full rounded-lg border bg-card p-4">
             <Calendar
                 key={`${currentDate.getTime()}-${currentView}`}
                 localizer={localizer}
@@ -335,6 +474,7 @@ export function DoctorScheduleCalendar({
                 components={{
                     event: EventComponent,
                     toolbar: Toolbar, // Hide built-in toolbar
+                    dateCellWrapper: DateCellWrapper, // Custom day cell wrapper for day clicks
                 }}
                 popup
                 showMultiDayTimes

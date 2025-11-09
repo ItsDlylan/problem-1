@@ -13,6 +13,7 @@ import AppLayout from '@/layouts/app-layout';
 import { DoctorScheduleCalendar } from '@/components/Facility/DoctorScheduleCalendar';
 import { CalendarFilters } from '@/components/Facility/CalendarFilters';
 import { AppointmentDetailsDialog } from '@/components/Facility/AppointmentDetailsDialog';
+import { DayEventsDialog } from '@/components/Facility/DayEventsDialog';
 import { CreateExceptionDialog } from '@/components/Facility/CreateExceptionDialog';
 import { EditExceptionDialog } from '@/components/Facility/EditExceptionDialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -84,6 +85,10 @@ export default function Calendar() {
     // Dialog state for appointment details
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    // Dialog state for day events (showing all events for a selected day)
+    const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+    const [isDayEventsDialogOpen, setIsDayEventsDialogOpen] = useState(false);
 
     // Dialog state for creating availability exception (blocked days)
     const [exceptionStartDate, setExceptionStartDate] = useState<Date | null>(null);
@@ -267,6 +272,99 @@ export default function Calendar() {
         // Keep the current date when switching views - don't auto-navigate to today
     };
 
+    // Transform slots and exceptions into calendar events for filtering
+    // This is similar to what DoctorScheduleCalendar does internally
+    const allEvents = useMemo(() => {
+        const slotEvents: CalendarEvent[] = slots.map((slot) => {
+            const doctorName = slot.doctor?.display_name || `Doctor ${slot.doctor_id}`;
+            const serviceName = slot.service_offering
+                ? ` - ${slot.service_offering.service_id}`
+                : '';
+            
+            let displayStatus = slot.status;
+            const firstAppointment = slot.appointments && slot.appointments.length > 0 ? slot.appointments[0] : null;
+            if (firstAppointment) {
+                const appointmentStatus = firstAppointment.status;
+                if (['no_show', 'completed', 'cancelled', 'checked_in', 'in_progress'].includes(appointmentStatus)) {
+                    displayStatus = appointmentStatus;
+                }
+            }
+
+            let title: string;
+            if (isDoctor && displayStatus === 'open') {
+                title = displayStatus;
+            } else if (isDoctor && firstAppointment && firstAppointment.patient) {
+                const patientName = `${firstAppointment.patient.first_name} ${firstAppointment.patient.last_name}`;
+                title = `${patientName} (${displayStatus})`;
+            } else {
+                title = `${doctorName}${serviceName} (${displayStatus})`;
+            }
+
+            return {
+                id: slot.id,
+                title,
+                start: new Date(slot.start_at),
+                end: new Date(slot.end_at),
+                resource: {
+                    doctorId: slot.doctor_id,
+                    doctorName,
+                    slotId: slot.id,
+                    status: displayStatus,
+                    slotStatus: slot.status,
+                    serviceOfferingId: slot.service_offering_id,
+                    slot: slot,
+                },
+            };
+        });
+
+        const exceptionEvents: CalendarEvent[] = exceptions.map((exception) => {
+            const doctorName = exception.doctor?.display_name || `Doctor ${exception.doctor_id}`;
+            const reason = exception.meta?.reason || '';
+            const title = reason ? `Blocked: ${reason}` : 'Blocked';
+
+            return {
+                id: `exception-${exception.id}`,
+                title,
+                start: new Date(exception.start_at),
+                end: new Date(exception.end_at),
+                resource: {
+                    doctorId: exception.doctor_id,
+                    doctorName,
+                    exceptionId: exception.id,
+                    status: 'blocked',
+                    exception: exception,
+                },
+            };
+        });
+
+        return [...slotEvents, ...exceptionEvents];
+    }, [slots, exceptions, isDoctor]);
+
+    // Filter events for the selected day
+    const dayEvents = useMemo(() => {
+        if (!selectedDay) return [];
+        
+        const dayStart = startOfDay(selectedDay);
+        const dayEnd = endOfDay(selectedDay);
+        
+        return allEvents.filter((event) => {
+            const eventStart = startOfDay(event.start);
+            const eventEnd = startOfDay(event.end);
+            // Event is on this day if it starts or ends on this day, or spans this day
+            return (
+                (eventStart >= dayStart && eventStart <= dayEnd) ||
+                (eventEnd >= dayStart && eventEnd <= dayEnd) ||
+                (eventStart <= dayStart && eventEnd >= dayEnd)
+            );
+        });
+    }, [allEvents, selectedDay]);
+
+    // Handle day click (when user clicks on a day cell)
+    const handleDayClick = (date: Date) => {
+        setSelectedDay(date);
+        setIsDayEventsDialogOpen(true);
+    };
+
     // Handle event selection (when user clicks on a slot or exception)
     const handleSelectEvent = (event: CalendarEvent) => {
         // Check if this is an exception (blocked period)
@@ -291,10 +389,12 @@ export default function Calendar() {
 
     // Handle slot selection (when doctor drags to select days)
     // Only works for doctors viewing their own calendar
+    // Note: This should NOT be triggered by clicking on date cells (those open DayEventsDialog instead)
     const handleSelectSlot = (slotInfo: { start: Date; end: Date }) => {
         if (!isDoctor || !userDoctorId) {
             return; // Only doctors can create exceptions
         }
+
 
         // Normalize dates to start of day for comparison
         // Use local date components to avoid timezone shifts
@@ -517,6 +617,7 @@ export default function Calendar() {
                                     onNavigate={handleNavigate}
                                     onSelectEvent={handleSelectEvent}
                                     onSelectSlot={handleSelectSlot}
+                                    onDayClick={handleDayClick}
                                     isOwnCalendar={isDoctor}
                                 />
                             )}
@@ -552,6 +653,7 @@ export default function Calendar() {
                                 </div>
                                 <p className="mt-2 text-xs text-muted-foreground">
                                     Slots show appointment status when booked. Click on a slot to view details. 
+                                    Click on a day to see all appointments for that day.
                                     {isDoctor && ' Click on blocked periods to edit or remove them.'}
                                 </p>
                             </div>
@@ -565,6 +667,16 @@ export default function Calendar() {
                 event={selectedEvent}
                 open={isDialogOpen}
                 onOpenChange={setIsDialogOpen}
+                isOwnCalendar={isDoctor}
+            />
+
+            {/* Day Events Dialog - Shows all events for a selected day */}
+            <DayEventsDialog
+                events={dayEvents}
+                selectedDate={selectedDay}
+                open={isDayEventsDialogOpen}
+                onOpenChange={setIsDayEventsDialogOpen}
+                onEventClick={handleSelectEvent}
                 isOwnCalendar={isDoctor}
             />
 
