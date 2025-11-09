@@ -44,7 +44,7 @@ final readonly class AvailabilitySlotController
         $query = AvailabilitySlot::where('facility_id', $facilityUser->facility_id)
             ->with([
                 'doctor',
-                'serviceOffering',
+                'serviceOffering.service', // Load service offering and its service relationship
                 'appointments.patient', // Load patient relationship for appointments
             ]);
 
@@ -98,7 +98,7 @@ final readonly class AvailabilitySlotController
         
         $appointmentQuery->with([
             'doctor',
-            'serviceOffering',
+            'serviceOffering.service', // Load service offering and its service relationship
             'patient', // Load patient relationship
             'availabilitySlot', // Load the slot relationship to check its date/facility
         ]);

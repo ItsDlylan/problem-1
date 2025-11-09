@@ -59,6 +59,20 @@ export interface Doctor {
 }
 
 /**
+ * Service represents a medical service.
+ */
+export interface Service {
+    id: number;
+    name: string;
+    description: string | null;
+    code: string | null;
+    code_system: string;
+    code_version: string | null;
+    default_duration_minutes: number;
+    category: string | null;
+}
+
+/**
  * Service offering represents a service that a doctor provides at a facility.
  */
 export interface ServiceOffering {
@@ -70,6 +84,7 @@ export interface ServiceOffering {
     visibility: string;
     created_at: string;
     updated_at: string;
+    service?: Service; // Loaded service relationship
 }
 
 /**

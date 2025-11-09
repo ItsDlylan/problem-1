@@ -332,6 +332,7 @@ export default function Calendar() {
                 event={selectedEvent}
                 open={isDialogOpen}
                 onOpenChange={setIsDialogOpen}
+                isOwnCalendar={isDoctor}
             />
         </AppLayout>
     );
