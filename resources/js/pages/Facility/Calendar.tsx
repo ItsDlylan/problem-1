@@ -131,11 +131,23 @@ export default function Calendar() {
             try {
                 const params = {
                     ...dateRange,
-                    doctor_id: selectedDoctorId || undefined,
+                    // Only include doctor_id if it's explicitly set (not null)
+                    // For receptionists/admins, null means "show all doctors"
+                    // For doctors, selectedDoctorId is already set to their doctor_id
+                    ...(selectedDoctorId ? { doctor_id: selectedDoctorId } : {}),
                     per_page: 1000, // Increase limit for calendar view to show all slots in the month
                 };
 
+                console.log('Fetching slots with params:', params);
                 const response = await getAvailabilitySlots(params);
+                
+                console.log('Slots response:', {
+                    success: response.success,
+                    slotCount: response.data?.length || 0,
+                    total: response.meta?.total || 0,
+                    selectedDoctorId,
+                    isDoctor,
+                });
                 
                 if (response.success && response.data) {
                     // Handle paginated response - get all pages if needed
@@ -157,9 +169,11 @@ export default function Calendar() {
                         });
                     }
                     
+                    console.log('Total slots after pagination:', allSlots.length);
                     setSlots(allSlots);
                 } else {
                     setError('Failed to load availability slots');
+                    setSlots([]);
                 }
             } catch (err) {
                 console.error('Failed to fetch slots:', err);
@@ -178,7 +192,7 @@ export default function Calendar() {
         }
 
         fetchSlots();
-    }, [dateRange.start_date, dateRange.end_date, selectedDoctorId]);
+    }, [dateRange.start_date, dateRange.end_date, selectedDoctorId, isDoctor]);
 
     // Handle calendar navigation (date/view changes)
     // This is called by react-big-calendar when user interacts with the calendar
@@ -269,13 +283,14 @@ export default function Calendar() {
                             {isLoading ? (
                                 <Skeleton className="h-[600px] w-full" />
                             ) : (
-                                    <DoctorScheduleCalendar
-                                        slots={slots}
-                                        currentDate={currentDate}
-                                        currentView={currentView}
-                                        onNavigate={handleNavigate}
-                                        onSelectEvent={handleSelectEvent}
-                                    />
+                                <DoctorScheduleCalendar
+                                    slots={slots}
+                                    currentDate={currentDate}
+                                    currentView={currentView}
+                                    onNavigate={handleNavigate}
+                                    onSelectEvent={handleSelectEvent}
+                                    isOwnCalendar={isDoctor}
+                                />
                             )}
 
                             {/* Legend */}

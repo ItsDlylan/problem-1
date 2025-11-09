@@ -109,7 +109,35 @@ final class GenerateAvailabilitySlots implements ShouldQueue
             $slotsToInsert = array_merge($slotsToInsert, $dateSlots);
         }
 
-        // Batch insert all slots for performance
+        // Filter out slots that already exist to prevent duplicates
+        // Check for existing slots with the same facility, doctor, start_at, and end_at
+        if (! empty($slotsToInsert)) {
+            // Get all existing slots for this doctor/facility in the date range
+            $dateRangeStart = min(array_column($slotsToInsert, 'start_at'));
+            $dateRangeEnd = max(array_column($slotsToInsert, 'end_at'));
+            
+            $existingSlots = AvailabilitySlot::where('facility_id', $rule->facility_id)
+                ->where('doctor_id', $rule->doctor_id)
+                ->whereBetween('start_at', [$dateRangeStart, $dateRangeEnd])
+                ->get()
+                ->keyBy(function ($slot) {
+                    // Use formatted datetime string for comparison
+                    return Carbon::parse($slot->start_at)->format('Y-m-d H:i:s') . '|' . 
+                           Carbon::parse($slot->end_at)->format('Y-m-d H:i:s');
+                });
+
+            // Filter out slots that already exist
+            $slotsToInsert = array_filter($slotsToInsert, function ($slot) use ($existingSlots) {
+                $key = Carbon::parse($slot['start_at'])->format('Y-m-d H:i:s') . '|' . 
+                       Carbon::parse($slot['end_at'])->format('Y-m-d H:i:s');
+                return ! $existingSlots->has($key);
+            });
+
+            // Re-index array after filtering
+            $slotsToInsert = array_values($slotsToInsert);
+        }
+
+        // Batch insert all new slots for performance
         if (! empty($slotsToInsert)) {
             // Use chunking for very large batches to avoid memory issues
             $chunks = array_chunk($slotsToInsert, 500);

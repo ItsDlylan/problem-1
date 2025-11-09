@@ -156,15 +156,7 @@ export function CalendarFilters({
                 </div>
             )}
             
-            {/* Show doctor name for doctors (since filter is hidden) */}
-            {hideDoctorFilter && doctors.length > 0 && (
-                <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Viewing: {doctors[0]?.display_name}
-                        {doctors[0]?.specialty && ` - ${doctors[0].specialty}`}
-                    </span>
-                </div>
-            )}
+            {/* Doctor name display removed - doctors viewing their own calendar don't need to see their name */}
 
             {/* View Switcher */}
             <div className="flex items-center gap-2">

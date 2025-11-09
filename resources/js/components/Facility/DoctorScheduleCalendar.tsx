@@ -27,8 +27,11 @@ const localizer = dateFnsLocalizer({
 /**
  * Transform availability slots into calendar events for react-big-calendar
  * If a slot has appointments, use the appointment status (e.g., no_show) instead of slot status
+ * 
+ * @param slots - Array of availability slots to transform
+ * @param isOwnCalendar - If true, doctor is viewing their own calendar (hide name for open slots)
  */
-function transformSlotsToEvents(slots: AvailabilitySlot[]): CalendarEvent[] {
+function transformSlotsToEvents(slots: AvailabilitySlot[], isOwnCalendar = false): CalendarEvent[] {
     return slots.map((slot) => {
         const doctorName = slot.doctor?.display_name || `Doctor ${slot.doctor_id}`;
         const serviceName = slot.service_offering
@@ -47,9 +50,18 @@ function transformSlotsToEvents(slots: AvailabilitySlot[]): CalendarEvent[] {
             }
         }
 
+        // For doctors viewing their own calendar, show just the status for "open" slots
+        // For other statuses or when viewing other doctors, show doctor name
+        let title: string;
+        if (isOwnCalendar && displayStatus === 'open') {
+            title = displayStatus;
+        } else {
+            title = `${doctorName}${serviceName} (${displayStatus})`;
+        }
+
         return {
             id: slot.id,
-            title: `${doctorName}${serviceName} (${displayStatus})`,
+            title,
             start: new Date(slot.start_at),
             end: new Date(slot.end_at),
             resource: {
@@ -146,6 +158,7 @@ interface DoctorScheduleCalendarProps {
     currentView: View;
     onNavigate: (date: Date, view: View) => void;
     onSelectEvent?: (event: CalendarEvent) => void;
+    isOwnCalendar?: boolean; // If true, doctor is viewing their own calendar
 }
 
 /**
@@ -159,9 +172,11 @@ export function DoctorScheduleCalendar({
     currentView,
     onNavigate,
     onSelectEvent,
+    isOwnCalendar = false,
 }: DoctorScheduleCalendarProps) {
     // Transform slots into calendar events
-    const events = useMemo(() => transformSlotsToEvents(slots), [slots]);
+    // Pass isOwnCalendar flag to show just "open" for open slots when viewing own calendar
+    const events = useMemo(() => transformSlotsToEvents(slots, isOwnCalendar), [slots, isOwnCalendar]);
 
     // Handle event click
     const handleSelectEvent = (event: CalendarEvent) => {
@@ -173,10 +188,11 @@ export function DoctorScheduleCalendar({
     // Custom event component for better visibility in month view
     const EventComponent = ({ event }: { event: CalendarEvent }) => {
         const timeStr = `${format(event.start, 'HH:mm')} - ${format(event.end, 'HH:mm')}`;
+        // Use event.title which already has the correct logic for showing "open" vs doctor name
         return (
             <div className="rbc-event-content" title={`${event.title} (${timeStr})`}>
                 <div className="rbc-event-label">{timeStr}</div>
-                <div className="rbc-event-title">{event.resource.doctorName}</div>
+                <div className="rbc-event-title">{event.title}</div>
             </div>
         );
     };
