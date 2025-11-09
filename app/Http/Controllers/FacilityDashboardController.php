@@ -201,25 +201,36 @@ final readonly class FacilityDashboardController
     private function calculateStats($slots, Carbon $today): array
     {
         $booked = 0;
-        $open = 0;
+        $completed = 0;
         $cancelled = 0;
         $upcoming = 0;
 
         foreach ($slots as $slot) {
             $slotStart = Carbon::parse($slot->start_at);
             $hasAppointments = $slot->appointments && $slot->appointments->count() > 0;
+            $appointment = $slot->appointments?->first();
 
             // Count booked slots (slots with status 'booked' OR slots that have appointments)
             if ($slot->status === 'booked' || $hasAppointments) {
                 $booked++;
-                // Count as upcoming if it's today (regardless of time) or in the future
-                // This ensures appointments scheduled for today show up even if the time has passed
-                if ($slotStart->isSameDay($today) || $slotStart->isFuture()) {
+                
+                // Count past appointments as completed if they're not cancelled or no_show
+                // This handles cases where appointments haven't been explicitly marked as completed
+                if ($hasAppointments && $appointment && $slotStart->isPast()) {
+                    $appointmentStatus = $appointment->status;
+                    // Count as completed if status is not cancelled or no_show
+                    // This includes scheduled, checked_in, in_progress, and completed statuses
+                    if ($appointmentStatus !== 'cancelled' && $appointmentStatus !== 'no_show') {
+                        $completed++;
+                    }
+                }
+                
+                // Count as upcoming only if it's in the future (by time, not just date)
+                if ($slotStart->isFuture()) {
                     $upcoming++;
                 }
             } elseif ($slot->status === 'open' && !$hasAppointments) {
-                // Only count as open if status is open AND has no appointments
-                $open++;
+                // Open slots are not counted in completed (they're just available slots)
             } elseif ($slot->status === 'cancelled') {
                 $cancelled++;
             } elseif ($slot->status === 'reserved') {
@@ -227,7 +238,16 @@ final readonly class FacilityDashboardController
                 // But we don't count them as booked unless they have appointments
                 if ($hasAppointments) {
                     $booked++;
-                    if ($slotStart->isSameDay($today) || $slotStart->isFuture()) {
+                    
+                    // Count past appointments as completed if they're not cancelled or no_show
+                    if ($appointment && $slotStart->isPast()) {
+                        $appointmentStatus = $appointment->status;
+                        if ($appointmentStatus !== 'cancelled' && $appointmentStatus !== 'no_show') {
+                            $completed++;
+                        }
+                    }
+                    
+                    if ($slotStart->isFuture()) {
                         $upcoming++;
                     }
                 }
@@ -237,7 +257,7 @@ final readonly class FacilityDashboardController
         return [
             'total' => $slots->count(),
             'booked' => $booked,
-            'open' => $open,
+            'completed' => $completed,
             'cancelled' => $cancelled,
             'upcoming' => $upcoming,
         ];
@@ -245,7 +265,8 @@ final readonly class FacilityDashboardController
 
     /**
      * Get upcoming appointments (next 3).
-     * Includes all appointments scheduled for today or in the future.
+     * Only includes appointments that are in the future (by time, not just date).
+     * Past appointments are excluded from this list.
      *
      * @param \Illuminate\Support\Collection $slots
      * @param Carbon $today
@@ -254,14 +275,14 @@ final readonly class FacilityDashboardController
     private function getUpcomingAppointments($slots, Carbon $today): array
     {
         $upcoming = $slots
-            ->filter(function ($slot) use ($today) {
+            ->filter(function ($slot) {
                 $slotStart = Carbon::parse($slot->start_at);
                 $hasAppointments = $slot->appointments && $slot->appointments->count() > 0;
                 
                 // Include slots that:
-                // 1. Are today or in the future (compare dates, not full datetime)
+                // 1. Are in the future (by datetime, not just date) - excludes past appointments
                 // 2. Have status 'booked' OR have appointments (including scheduled appointments)
-                return ($slotStart->isSameDay($today) || $slotStart->isFuture()) && (
+                return $slotStart->isFuture() && (
                     $slot->status === 'booked' ||
                     $hasAppointments
                 );
@@ -303,7 +324,7 @@ final readonly class FacilityDashboardController
         return [
             'total' => 0,
             'booked' => 0,
-            'open' => 0,
+            'completed' => 0,
             'cancelled' => 0,
             'upcoming' => 0,
         ];

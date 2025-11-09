@@ -14,13 +14,46 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 /**
+ * Converts raw status values to human-friendly text.
+ * Transforms snake_case statuses like "checked_in" to "Checked In".
+ * 
+ * @param status - The raw status string from the backend
+ * @returns Human-friendly status text with proper capitalization
+ */
+function formatStatus(status: string): string {
+  // Map of status values to their human-friendly display text
+  const statusMap: Record<string, string> = {
+    'checked_in': 'Checked In',
+    'in_progress': 'In Progress',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+    'no_show': 'No Show',
+    'scheduled': 'Scheduled',
+    'booked': 'Booked',
+    'open': 'Open',
+    'reserved': 'Reserved',
+  };
+
+  // Return mapped value if it exists, otherwise format the status
+  if (statusMap[status]) {
+    return statusMap[status];
+  }
+
+  // Fallback: convert snake_case to Title Case
+  return status
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+/**
  * Dashboard props received from the controller.
  */
 interface DashboardProps {
   todayStats: {
     total: number;
     booked: number;
-    open: number;
+    completed: number;
     cancelled: number;
     upcoming: number;
   };
@@ -123,10 +156,10 @@ export default function Dashboard({ todayStats, upcomingAppointments }: Dashboar
                       </div>
                       <div className="rounded-lg border bg-card p-4">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4 text-blue-600" />
-                          <span>Open</span>
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span>Completed</span>
                         </div>
-                        <div className="mt-2 text-2xl font-bold">{todayStats.open}</div>
+                        <div className="mt-2 text-2xl font-bold">{todayStats.completed}</div>
                       </div>
                       <div className="rounded-lg border bg-card p-4">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -209,7 +242,7 @@ export default function Dashboard({ todayStats, upcomingAppointments }: Dashboar
                                       : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
                                   }`}
                                 >
-                                  {status}
+                                  {formatStatus(status)}
                                 </span>
                               </div>
                             </div>
