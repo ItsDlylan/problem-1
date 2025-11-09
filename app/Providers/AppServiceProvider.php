@@ -7,12 +7,19 @@ namespace App\Providers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Twilio\Rest\Client;
 
 final class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Bind Twilio Client
+        $this->app->singleton(Client::class, function ($app) {
+            return new Client(
+                config('services.twilio.account_sid'),
+                config('services.twilio.auth_token')
+            );
+        });
     }
 
     public function boot(): void

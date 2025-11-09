@@ -640,6 +640,119 @@ final readonly class TwilioWebhookController
     }
 
     /**
+     * Handle reminder call - find patient and deliver appointment reminder.
+     */
+    public function handleReminderCall(Request $request): Response
+    {
+        try {
+            $callSid = $request->input('CallSid');
+            $to = $request->input('To'); // The number we called (+14153519358)
+
+            Log::info('Reminder call received', [
+                'call_sid' => $callSid,
+                'to' => $to,
+                'all_inputs' => $request->all(),
+            ]);
+
+            // Look up patient by phone number
+            $patient = $this->patientIdentificationService->findByPhoneNumber($to);
+
+            if (! $patient) {
+                Log::warning('Patient not found for reminder call', [
+                    'call_sid' => $callSid,
+                    'phone_number' => $to,
+                ]);
+
+                $response = new VoiceResponse();
+                $response->say(
+                    'I apologize, but I could not find a patient account for this phone number. Goodbye.',
+                    ['voice' => 'alice']
+                );
+                $response->hangup();
+
+                return response($response->asXML(), 200, ['Content-Type' => 'text/xml']);
+            }
+
+            // Get the last created appointment for this patient
+            $appointment = $patient->appointments()
+                ->orderBy('created_at', 'desc')
+                ->with(['facility', 'doctor', 'serviceOffering.service'])
+                ->first();
+
+            if (! $appointment) {
+                Log::info('No appointments found for patient', [
+                    'call_sid' => $callSid,
+                    'patient_id' => $patient->id,
+                ]);
+
+                $response = new VoiceResponse();
+                $response->say(
+                    "Hello {$patient->first_name}. I found your account, but you don't have any appointments scheduled. Goodbye.",
+                    ['voice' => 'alice']
+                );
+                $response->hangup();
+
+                return response($response->asXML(), 200, ['Content-Type' => 'text/xml']);
+            }
+
+            // Format appointment details for reminder message
+            $appointmentDate = $appointment->start_at->format('l, F j, Y \a\t g:i A');
+
+            // Build reminder message components
+            $service = $appointment->serviceOffering && $appointment->serviceOffering->service 
+                ? $appointment->serviceOffering->service->name 
+                : 'an appointment';
+            
+            $doctorPart = '';
+            if ($appointment->doctor) {
+                $doctorName = $appointment->doctor->display_name ?? 
+                    (($appointment->doctor->first_name ?? '') . ' ' . ($appointment->doctor->last_name ?? ''));
+                if (trim($doctorName)) {
+                    $doctorPart = "with Doctor {$doctorName} ";
+                }
+            }
+
+            $locationPart = '';
+            if ($appointment->facility && $appointment->facility->name) {
+                $locationPart = "at {$appointment->facility->name}";
+            }
+
+            // Build short reminder message
+            $message = "Hello {$patient->first_name}. You have {$service} {$doctorPart}{$appointmentDate} {$locationPart}. Please see your MedAI account for more details. Goodbye.";
+
+            Log::info('Sending appointment reminder', [
+                'call_sid' => $callSid,
+                'patient_id' => $patient->id,
+                'appointment_id' => $appointment->id,
+            ]);
+
+            $response = new VoiceResponse();
+            // Add 3 second pause before speaking
+            $response->pause(['length' => 3]);
+            $response->say($message, ['voice' => 'alice']);
+            $response->hangup();
+
+            return response($response->asXML(), 200, ['Content-Type' => 'text/xml']);
+        } catch (\Exception $e) {
+            Log::error('Error handling reminder call', [
+                'call_sid' => $request->input('CallSid'),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'all_inputs' => $request->all(),
+            ]);
+
+            $response = new VoiceResponse();
+            $response->say(
+                'I apologize, but an error occurred while processing your reminder call. Please contact the facility directly. Goodbye.',
+                ['voice' => 'alice']
+            );
+            $response->hangup();
+
+            return response($response->asXML(), 200, ['Content-Type' => 'text/xml']);
+        }
+    }
+
+    /**
      * Handle call status updates.
      */
     public function handleCallStatus(Request $request): Response

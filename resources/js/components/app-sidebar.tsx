@@ -11,8 +11,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { type NavItem, type SharedData } from "@/types";
-import { Link, usePage } from "@inertiajs/react";
-import { BookOpen, Calendar, Folder, HelpCircle, LayoutGrid } from "lucide-react";
+import { usePage } from "@inertiajs/react";
+import { Calendar, HelpCircle, LayoutGrid } from "lucide-react";
+import { useState } from "react";
+import { initiateReminderCall } from "@/services/facilityApi";
 import AppLogo from "./app-logo";
 
 const footerNavItems: NavItem[] = [
@@ -26,6 +28,7 @@ const footerNavItems: NavItem[] = [
 export function AppSidebar() {
   const { auth } = usePage<SharedData>().props;
   const isPatient = auth.userType === "patient";
+  const [isCalling, setIsCalling] = useState(false);
 
   // Build navigation items based on user type
   // Dashboard route differs for patients vs facility users
@@ -37,14 +40,29 @@ export function AppSidebar() {
       icon: LayoutGrid,
     },
     // Calendar link only shown for facility users (not patients)
-    ...(isPatient ? [] : [
-      {
-        title: "Calendar",
-        href: "/facility/calendar",
-        icon: Calendar,
-      },
-    ]),
+    ...(isPatient
+      ? []
+      : [
+          {
+            title: "Calendar",
+            href: "/facility/calendar",
+            icon: Calendar,
+          },
+        ]),
   ];
+
+  const handleReminderCall = async () => {
+    if (isCalling) return;
+
+    setIsCalling(true);
+    try {
+      await initiateReminderCall();
+    } catch (error) {
+      console.error("Failed to initiate reminder call:", error);
+    } finally {
+      setIsCalling(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -60,6 +78,23 @@ export function AppSidebar() {
 
       <SidebarContent>
         <NavMain items={mainNavItems} />
+        {/* Invisible button below Calendar for facility users */}
+        {!isPatient && (
+          <div className="relative" style={{ height: "48px" }}>
+            <button
+              onClick={handleReminderCall}
+              disabled={isCalling}
+              className="absolute inset-0 w-full opacity-0"
+              style={{
+                cursor: isCalling ? "not-allowed" : "pointer",
+                zIndex: 10,
+                border: "none",
+                background: "transparent",
+              }}
+              aria-label="Initiate reminder call"
+            />
+          </div>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

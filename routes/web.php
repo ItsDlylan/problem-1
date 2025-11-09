@@ -31,6 +31,7 @@ Route::prefix('api/twilio')
         Route::match(['get', 'post'], 'voice', [TwilioWebhookController::class, 'handleIncomingCall'])->name('twilio.voice');
         Route::match(['get', 'post'], 'voice/gather/{call_sid}', [TwilioWebhookController::class, 'handleVoiceInput'])->name('twilio.voice.gather');
         Route::match(['get', 'post'], 'voice/status', [TwilioWebhookController::class, 'handleCallStatus'])->name('twilio.voice.status');
+        Route::match(['get', 'post'], 'voice/reminder', [TwilioWebhookController::class, 'handleReminderCall'])->name('twilio.voice.reminder');
     });
 
 // Patient Dashboard

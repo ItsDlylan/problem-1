@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Twilio\Rest\Client;
 use Twilio\TwiML\VoiceResponse;
 
 final readonly class TwilioCallService
 {
+    public function __construct(
+        private Client $twilioClient,
+    ) {
+    }
     /**
      * Generate TwiML response for greeting.
      */
@@ -128,6 +133,28 @@ final readonly class TwilioCallService
         $response->pause(['length' => $seconds]);
 
         return $response;
+    }
+
+    /**
+     * Initiate an outbound Twilio call.
+     *
+     * @param string $to The phone number to call (E.164 format)
+     * @param string $webhookUrl The URL to call when the call is answered
+     * @param string|null $from The phone number to call from (defaults to configured Twilio number)
+     * @return \Twilio\Rest\Api\V2010\Account\CallInstance
+     */
+    public function initiateOutboundCall(string $to, string $webhookUrl, ?string $from = null): \Twilio\Rest\Api\V2010\Account\CallInstance
+    {
+        $fromNumber = $from ?? config('services.twilio.phone_number');
+
+        return $this->twilioClient->calls->create(
+            $to,
+            $fromNumber,
+            [
+                'url' => $webhookUrl,
+                'method' => 'POST',
+            ]
+        );
     }
 }
 

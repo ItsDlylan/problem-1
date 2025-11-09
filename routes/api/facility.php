@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Facility\AvailabilityExceptionController;
 use App\Http\Controllers\Api\Facility\AvailabilityRuleController;
 use App\Http\Controllers\Api\Facility\AvailabilitySlotController;
 use App\Http\Controllers\Api\Facility\DoctorController;
+use App\Http\Controllers\Api\Facility\ReminderCallController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -41,5 +42,9 @@ Route::middleware(['auth:facility'])->group(function (): void {
         ->name('api.facility.doctors');
     Route::get('/doctors/{id}', [DoctorController::class, 'show'])
         ->name('api.facility.doctors.show');
+
+    // Reminder call endpoints
+    Route::post('/reminder-call/initiate', [ReminderCallController::class, 'initiate'])
+        ->name('api.facility.reminder-call.initiate');
 });
 

@@ -248,3 +248,29 @@ export async function deleteAvailabilityException(
     );
 }
 
+/**
+ * Initiate a reminder call to +14153519358.
+ * When answered, the system will find the patient by phone number
+ * and deliver a reminder about their last created appointment.
+ *
+ * @returns Response with call status
+ */
+export async function initiateReminderCall(): Promise<ApiResponse<{
+    call_sid: string;
+    status: string;
+    to: string;
+    from: string;
+}>> {
+    return fetchApi<ApiResponse<{
+        call_sid: string;
+        status: string;
+        to: string;
+        from: string;
+    }>>(
+        '/reminder-call/initiate',
+        {
+            method: 'POST',
+        },
+    );
+}
+
