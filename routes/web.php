@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\FacilityDashboardController;
 use App\Http\Controllers\FacilityPasswordController;
 use App\Http\Controllers\FacilityProfileController;
 use App\Http\Controllers\FacilityTwoFactorAuthenticationController;
@@ -51,7 +52,7 @@ Route::middleware(['auth:patient'])->group(function (): void {
 
 // Facility Dashboard
 Route::middleware(['auth:facility'])->group(function (): void {
-    Route::get('facility/dashboard', fn () => Inertia::render('facility-dashboard'))->name('facility.dashboard');
+    Route::get('facility/dashboard', [FacilityDashboardController::class, 'index'])->name('facility.dashboard');
     Route::get('facility/calendar', fn () => Inertia::render('Facility/Calendar'))->name('facility.calendar');
     
     // Facility Settings

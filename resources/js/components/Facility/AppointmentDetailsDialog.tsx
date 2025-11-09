@@ -7,7 +7,6 @@ import { format } from 'date-fns';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -18,6 +17,7 @@ interface AppointmentDetailsDialogProps {
     event: CalendarEvent | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    isOwnCalendar?: boolean; // If true, hide doctor information (doctor viewing their own calendar)
 }
 
 /**
@@ -56,6 +56,7 @@ export function AppointmentDetailsDialog({
     event,
     open,
     onOpenChange,
+    isOwnCalendar = false,
 }: AppointmentDetailsDialogProps) {
     if (!event) {
         return null;
@@ -71,20 +72,9 @@ export function AppointmentDetailsDialog({
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle>Appointment Details</DialogTitle>
-                    <DialogDescription>
-                        View detailed information about this appointment slot
-                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    {/* Status Badge */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">Status:</span>
-                        <Badge variant={getStatusVariant(event.resource.status)}>
-                            {formatStatus(event.resource.status)}
-                        </Badge>
-                    </div>
-
                     {/* Date and Time */}
                     <div className="space-y-2">
                         <div>
@@ -99,8 +89,8 @@ export function AppointmentDetailsDialog({
                         </div>
                     </div>
 
-                    {/* Doctor Information */}
-                    {doctor && (
+                    {/* Doctor Information - Hide if viewing own calendar */}
+                    {doctor && !isOwnCalendar && (
                         <div>
                             <span className="text-sm font-medium text-muted-foreground">Doctor:</span>
                             <p className="text-sm">
@@ -114,7 +104,14 @@ export function AppointmentDetailsDialog({
                     {serviceOffering && (
                         <div>
                             <span className="text-sm font-medium text-muted-foreground">Service:</span>
-                            <p className="text-sm">Service ID: {serviceOffering.service_id}</p>
+                            <p className="text-sm">
+                                {serviceOffering.service?.name || `Service ID: ${serviceOffering.service_id}`}
+                            </p>
+                            {serviceOffering.service?.description && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {serviceOffering.service.description}
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -194,25 +191,6 @@ export function AppointmentDetailsDialog({
                                 Appointments:
                             </span>
                             <p className="text-sm text-muted-foreground">No appointments booked</p>
-                        </div>
-                    )}
-
-                    {/* Slot Information */}
-                    {slot && (
-                        <div className="space-y-2 rounded-lg border bg-muted/50 p-3">
-                            <span className="text-sm font-medium text-muted-foreground">
-                                Slot Information:
-                            </span>
-                            <div className="space-y-1 text-xs text-muted-foreground">
-                                <p>Slot ID: {slot.id}</p>
-                                <p>Capacity: {slot.capacity}</p>
-                                {slot.reserved_until && (
-                                    <p>
-                                        Reserved until:{' '}
-                                        {format(new Date(slot.reserved_until), 'MMM d, yyyy h:mm a')}
-                                    </p>
-                                )}
-                            </div>
                         </div>
                     )}
                 </div>

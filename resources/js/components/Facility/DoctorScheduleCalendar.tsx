@@ -5,11 +5,11 @@
 
 import { useMemo } from 'react';
 import { Calendar, dateFnsLocalizer, View } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, startOfWeek as getStartOfWeek, endOfWeek as getEndOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-import type { AvailabilitySlot, CalendarEvent } from '@/types/facility';
+import type { AvailabilityException, AvailabilitySlot, CalendarEvent } from '@/types/facility';
 
 // Configure date-fns localizer for react-big-calendar
 const locales = {
@@ -25,10 +25,41 @@ const localizer = dateFnsLocalizer({
 });
 
 /**
+ * Transform availability exceptions into calendar events for react-big-calendar
+ * Exceptions are shown as blocked periods on the calendar
+ * 
+ * @param exceptions - Array of availability exceptions to transform
+ */
+function transformExceptionsToEvents(exceptions: AvailabilityException[]): CalendarEvent[] {
+    return exceptions.map((exception) => {
+        const doctorName = exception.doctor?.display_name || `Doctor ${exception.doctor_id}`;
+        const reason = exception.meta?.reason || '';
+        const title = reason ? `Blocked: ${reason}` : 'Blocked';
+
+        return {
+            id: `exception-${exception.id}`,
+            title,
+            start: new Date(exception.start_at),
+            end: new Date(exception.end_at),
+            resource: {
+                doctorId: exception.doctor_id,
+                doctorName,
+                exceptionId: exception.id,
+                status: 'blocked',
+                exception: exception, // Include full exception data
+            },
+        };
+    });
+}
+
+/**
  * Transform availability slots into calendar events for react-big-calendar
  * If a slot has appointments, use the appointment status (e.g., no_show) instead of slot status
+ * 
+ * @param slots - Array of availability slots to transform
+ * @param isOwnCalendar - If true, doctor is viewing their own calendar (hide name for open slots)
  */
-function transformSlotsToEvents(slots: AvailabilitySlot[]): CalendarEvent[] {
+function transformSlotsToEvents(slots: AvailabilitySlot[], isOwnCalendar = false): CalendarEvent[] {
     return slots.map((slot) => {
         const doctorName = slot.doctor?.display_name || `Doctor ${slot.doctor_id}`;
         const serviceName = slot.service_offering
@@ -47,9 +78,18 @@ function transformSlotsToEvents(slots: AvailabilitySlot[]): CalendarEvent[] {
             }
         }
 
+        // For doctors viewing their own calendar, show just the status for "open" slots
+        // For other statuses or when viewing other doctors, show doctor name
+        let title: string;
+        if (isOwnCalendar && displayStatus === 'open') {
+            title = displayStatus;
+        } else {
+            title = `${doctorName}${serviceName} (${displayStatus})`;
+        }
+
         return {
             id: slot.id,
-            title: `${doctorName}${serviceName} (${displayStatus})`,
+            title,
             start: new Date(slot.start_at),
             end: new Date(slot.end_at),
             resource: {
@@ -72,6 +112,7 @@ function transformSlotsToEvents(slots: AvailabilitySlot[]): CalendarEvent[] {
  * - Open: Blue
  * - Cancelled: Gray
  * - No Show: Red/Orange
+ * - Blocked: Dark gray/red
  */
 function getStatusColor(status: string): string {
     switch (status) {
@@ -89,6 +130,8 @@ function getStatusColor(status: string): string {
             return 'rgb(107, 114, 128)'; // gray-500
         case 'no_show':
             return 'rgb(239, 68, 68)'; // red-500
+        case 'blocked':
+            return 'rgb(75, 85, 99)'; // gray-600 (darker for blocked periods)
         default:
             return 'rgb(107, 114, 128)'; // gray-500 as default
     }
@@ -118,6 +161,10 @@ function eventStyleGetter(event: CalendarEvent) {
     } else if (event.resource.status === 'no_show') {
         opacity = 0.85;
         fontWeight = '600';
+    } else if (event.resource.status === 'blocked') {
+        // Blocked periods should be more visible
+        opacity = 0.8;
+        fontWeight = '600';
     }
 
     return {
@@ -142,10 +189,13 @@ function eventStyleGetter(event: CalendarEvent) {
 
 interface DoctorScheduleCalendarProps {
     slots: AvailabilitySlot[];
+    exceptions?: AvailabilityException[]; // Availability exceptions (blocked periods)
     currentDate: Date;
     currentView: View;
     onNavigate: (date: Date, view: View) => void;
     onSelectEvent?: (event: CalendarEvent) => void;
+    onSelectSlot?: (slotInfo: { start: Date; end: Date }) => void; // Handler for drag selection
+    isOwnCalendar?: boolean; // If true, doctor is viewing their own calendar
 }
 
 /**
@@ -155,13 +205,22 @@ interface DoctorScheduleCalendarProps {
  */
 export function DoctorScheduleCalendar({
     slots,
+    exceptions = [],
     currentDate,
     currentView,
     onNavigate,
     onSelectEvent,
+    onSelectSlot,
+    isOwnCalendar = false,
 }: DoctorScheduleCalendarProps) {
-    // Transform slots into calendar events
-    const events = useMemo(() => transformSlotsToEvents(slots), [slots]);
+    // Transform slots and exceptions into calendar events
+    // Pass isOwnCalendar flag to show just "open" for open slots when viewing own calendar
+    const slotEvents = useMemo(() => transformSlotsToEvents(slots, isOwnCalendar), [slots, isOwnCalendar]);
+    const exceptionEvents = useMemo(() => transformExceptionsToEvents(exceptions), [exceptions]);
+    
+    // Combine slot events and exception events
+    // Exceptions should appear on top (rendered last) so they're more visible
+    const events = useMemo(() => [...slotEvents, ...exceptionEvents], [slotEvents, exceptionEvents]);
 
     // Handle event click
     const handleSelectEvent = (event: CalendarEvent) => {
@@ -170,13 +229,50 @@ export function DoctorScheduleCalendar({
         }
     };
 
+    // Handle slot selection (drag to select days)
+    // Only enable for doctors viewing their own calendar
+    const handleSelectSlot = (slotInfo: { start: Date; end: Date }) => {
+        if (onSelectSlot && isOwnCalendar) {
+            // Normalize dates to start of day for consistency
+            const start = new Date(slotInfo.start);
+            start.setHours(0, 0, 0, 0);
+            
+            const end = new Date(slotInfo.end);
+            end.setHours(0, 0, 0, 0);
+            
+            // Check if this is a single day selection
+            // react-big-calendar might give us end as start of next day for single day selections
+            const startDateStr = start.toDateString();
+            const endDateStr = end.toDateString();
+            
+            // Calculate the difference in days
+            const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            
+            // If dates are the same OR end is exactly one day after start (at 00:00:00), it's a single day selection
+            if (startDateStr === endDateStr || daysDiff === 1) {
+                // Single day selection - use the same date for both
+                onSelectSlot({ start, end: new Date(start) });
+            } else {
+                // Multi-day selection - use as is
+                onSelectSlot({ start, end });
+            }
+        }
+    };
+
     // Custom event component for better visibility in month view
     const EventComponent = ({ event }: { event: CalendarEvent }) => {
-        const timeStr = `${format(event.start, 'HH:mm')} - ${format(event.end, 'HH:mm')}`;
+        // For blocked exceptions, show full day without time
+        // For slots, show time range
+        const isException = event.resource.status === 'blocked' && event.resource.exceptionId;
+        const timeStr = isException 
+            ? 'All Day' 
+            : `${format(event.start, 'HH:mm')} - ${format(event.end, 'HH:mm')}`;
+        
+        // Use event.title which already has the correct logic for showing "open" vs doctor name
         return (
             <div className="rbc-event-content" title={`${event.title} (${timeStr})`}>
-                <div className="rbc-event-label">{timeStr}</div>
-                <div className="rbc-event-title">{event.resource.doctorName}</div>
+                {!isException && <div className="rbc-event-label">{timeStr}</div>}
+                <div className="rbc-event-title">{event.title}</div>
             </div>
         );
     };
@@ -184,6 +280,40 @@ export function DoctorScheduleCalendar({
     // Custom toolbar component to hide react-big-calendar's built-in toolbar
     // We use our own custom controls instead
     const Toolbar = () => null;
+
+    // Custom day prop getter to mark off-range days
+    // The actual selection prevention is handled in the parent component's handleSelectSlot
+    const dayPropGetter = (date: Date) => {
+        // Calculate the valid range for the current view
+        let validStart: Date;
+        let validEnd: Date;
+        
+        switch (currentView) {
+            case 'week':
+                validStart = getStartOfWeek(currentDate, { weekStartsOn: 0 });
+                validEnd = getEndOfWeek(currentDate, { weekStartsOn: 0 });
+                break;
+            case 'day':
+                validStart = startOfDay(currentDate);
+                validEnd = endOfDay(currentDate);
+                break;
+            case 'month':
+            default:
+                validStart = startOfMonth(currentDate);
+                validEnd = endOfMonth(currentDate);
+                break;
+        }
+
+        // Check if this date is outside the valid range
+        const dateOnly = startOfDay(date);
+        const isOffRange = dateOnly < startOfDay(validStart) || dateOnly > startOfDay(validEnd);
+
+        return {
+            className: isOffRange ? 'rbc-off-range-bg' : '',
+            // Add a class to mark off-range days for styling if needed
+            // Selection is prevented in handleSelectSlot validation
+        };
+    };
 
     return (
         <div className="h-[600px] w-full rounded-lg border bg-card p-4">
@@ -198,7 +328,10 @@ export function DoctorScheduleCalendar({
                 onNavigate={onNavigate}
                 onView={onNavigate}
                 onSelectEvent={handleSelectEvent}
+                onSelectSlot={isOwnCalendar ? handleSelectSlot : undefined} // Only enable drag selection for doctors
+                selectable={isOwnCalendar} // Enable selection only for doctors viewing their own calendar
                 eventPropGetter={eventStyleGetter}
+                dayPropGetter={dayPropGetter} // Disable selection on off-range days
                 components={{
                     event: EventComponent,
                     toolbar: Toolbar, // Hide built-in toolbar

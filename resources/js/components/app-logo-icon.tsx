@@ -1,93 +1,103 @@
 import { SVGAttributes } from 'react';
 
 /**
- * Doctor logo icon with lab coat and stethoscope
- * Features a friendly doctor figure wearing a white lab coat
+ * Penguin doctor logo icon with lab coat and stethoscope
+ * Features a classic penguin shape with proper proportions
  * Includes a detailed stethoscope around the neck with chest piece
  * Designed to be simple and recognizable at small sizes
  * 
- * Design approach:
- * - Head and body use main color (darker)
- * - Lab coat uses full opacity to appear bright/white
- * - Stethoscope uses main color for visibility
- * - Creates clear visual distinction between body and lab coat
+ * Classic penguin features:
+ * - Round head with black top
+ * - White face/chest area (the classic penguin "bib")
+ * - Black back and sides
+ * - White belly
+ * - Orange beak
+ * - Flippers on the sides
  */
 export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
     return (
         <svg {...props} viewBox="0 0 40 42" xmlns="http://www.w3.org/2000/svg">
-            {/* Doctor's body/shirt - base layer under the lab coat, much darker */}
-            {/* This creates strong contrast so the lab coat appears bright white */}
-            <rect x="15" y="20" width="10" height="16" rx="1.5" fill="currentColor" opacity="0.25" />
+            {/* Penguin's black back - classic penguin shape, rounded oval */}
+            <ellipse cx="20" cy="24" rx="7" ry="10" fill="currentColor" opacity="0.8" />
             
-            {/* Lab coat - main white coat that goes over the body */}
-            {/* Uses full opacity (100%) to appear bright white and distinct from darker body */}
+            {/* Penguin's white belly/front - distinctive penguin feature */}
+            {/* This creates the classic black and white contrast */}
+            <ellipse cx="20" cy="25" rx="5" ry="8" fill="currentColor" opacity="0.2" />
+            
+            {/* Penguin's head - black, round */}
+            <circle cx="20" cy="10" r="6" fill="currentColor" opacity="0.8" />
+            
+            {/* Penguin's white face patch - classic penguin "bib" pattern */}
+            {/* This is the distinctive white area that goes from face down to chest */}
             <path
-                d="M 13 20 L 13 36 L 27 36 L 27 20 L 25 20 L 25 22 L 15 22 L 15 20 Z"
+                d="M 20 8 Q 20 12 20 16 Q 18 18 16 20 Q 14 22 15 24 Q 16 26 18 27 Q 20 28 22 27 Q 24 26 25 24 Q 26 22 24 20 Q 22 18 20 16 Q 20 12 20 8 Z"
                 fill="currentColor"
-            />
-            
-            {/* Lab coat collar - V-neck style, bright white */}
-            <path
-                d="M 20 20 L 15 22 L 20 24 L 25 22 Z"
-                fill="currentColor"
-            />
-            
-            {/* Lab coat buttons - small circles down the front for detail */}
-            {/* Darker to show as buttons/accents on the bright white coat */}
-            <circle cx="20" cy="26" r="0.8" fill="currentColor" opacity="0.4" />
-            <circle cx="20" cy="29" r="0.8" fill="currentColor" opacity="0.4" />
-            <circle cx="20" cy="32" r="0.8" fill="currentColor" opacity="0.4" />
-            
-            {/* Doctor's head - circular and friendly */}
-            {/* Slightly darker than lab coat but lighter than body to show it's part of the person */}
-            <circle cx="20" cy="12" r="7" fill="currentColor" opacity="0.6" />
-            
-            {/* Stethoscope - hangs around the neck, tubes go down naturally */}
-            {/* The stethoscope wraps around the neck area and hangs down */}
-            {/* Left side - curves around neck and hangs down */}
-            <path
-                d="M 20 19 Q 16 19 14 20 Q 12 22 12 26 Q 12 30 13 32"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.8"
-            />
-            
-            {/* Right side - curves around neck and hangs down */}
-            <path
-                d="M 20 19 Q 24 19 26 20 Q 28 22 28 26 Q 28 30 27 32"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.8"
-            />
-            
-            {/* Stethoscope chest piece - hangs down from the neck */}
-            {/* This is the part that doctors use to listen to patients */}
-            <circle cx="20" cy="28" r="2.5" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.8" />
-            <circle cx="20" cy="28" r="1.2" fill="currentColor" opacity="0.8" />
-            
-            {/* Stethoscope earpieces - positioned at the sides of the head/neck */}
-            {/* These are where the doctor puts the earpieces in their ears */}
-            <circle cx="14" cy="20" r="1.8" fill="currentColor" opacity="0.8" />
-            <circle cx="26" cy="20" r="1.8" fill="currentColor" opacity="0.8" />
-            
-            {/* Doctor's face - simple eyes for cuteness */}
-            {/* Eyes use lighter opacity to show as white on dark head */}
-            <circle cx="17.5" cy="11" r="1" fill="currentColor" opacity="0.15" />
-            <circle cx="22.5" cy="11" r="1" fill="currentColor" opacity="0.15" />
-            
-            {/* Simple smile */}
-            <path
-                d="M 17 14 Q 20 16 23 14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
                 opacity="0.2"
             />
+            
+            {/* Penguin's left flipper - distinctive penguin feature, on the side */}
+            <ellipse cx="11" cy="23" rx="2.5" ry="5" fill="currentColor" opacity="0.7" transform="rotate(-20 11 23)" />
+            
+            {/* Penguin's right flipper - on the other side */}
+            <ellipse cx="29" cy="23" rx="2.5" ry="5" fill="currentColor" opacity="0.7" transform="rotate(20 29 23)" />
+            
+            {/* Lab coat - white coat that goes over the penguin */}
+            {/* Positioned to show the penguin's distinctive features */}
+            <path
+                d="M 11 21 L 11 36 L 29 36 L 29 21 L 27 21 L 27 23 L 13 23 L 13 21 Z"
+                fill="currentColor"
+            />
+            
+            {/* Lab coat collar - V-neck style */}
+            <path
+                d="M 20 21 L 13 23 L 20 25 L 27 23 Z"
+                fill="currentColor"
+            />
+            
+            {/* Lab coat buttons */}
+            <circle cx="20" cy="27" r="0.7" fill="currentColor" opacity="0.4" />
+            <circle cx="20" cy="30" r="0.7" fill="currentColor" opacity="0.4" />
+            <circle cx="20" cy="33" r="0.7" fill="currentColor" opacity="0.4" />
+            
+            {/* Penguin's beak - orange/yellow triangle */}
+            <path
+                d="M 20 12 L 18 15 L 20 16 L 22 15 Z"
+                fill="currentColor"
+                opacity="0.8"
+            />
+            
+            {/* Stethoscope - hangs around the neck */}
+            {/* Left side */}
+            <path
+                d="M 20 21 Q 16 21 14 22 Q 12 24 12 28 Q 12 32 13 34"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity="0.8"
+            />
+            
+            {/* Right side */}
+            <path
+                d="M 20 21 Q 24 21 26 22 Q 28 24 28 28 Q 28 32 27 34"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity="0.8"
+            />
+            
+            {/* Stethoscope chest piece */}
+            <circle cx="20" cy="30" r="2.5" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.8" />
+            <circle cx="20" cy="30" r="1.2" fill="currentColor" opacity="0.8" />
+            
+            {/* Stethoscope earpieces */}
+            <circle cx="14" cy="22" r="1.6" fill="currentColor" opacity="0.8" />
+            <circle cx="26" cy="22" r="1.6" fill="currentColor" opacity="0.8" />
+            
+            {/* Penguin's eyes - on the black head */}
+            <circle cx="17.5" cy="9" r="1" fill="currentColor" opacity="0.12" />
+            <circle cx="22.5" cy="9" r="1" fill="currentColor" opacity="0.12" />
         </svg>
     );
 }
