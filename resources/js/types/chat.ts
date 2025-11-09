@@ -7,6 +7,11 @@ export interface ExtractedAppointmentDetails {
   service: string;
   datetime: string;
   serviceOfferingId: number;
+  isAvailable?: boolean;
+  alternativeTimes?: Array<{
+    startAt: string;
+    endAt: string;
+  }>;
   serviceOffering: {
     id: number;
     service: {

@@ -183,7 +183,9 @@ export function ChatbotPanel({ isOpen, onClose }: ChatbotPanelProps) {
               <CardHeader>
                 <CardTitle>Appointment Details</CardTitle>
                 <CardDescription>
-                  Please confirm your appointment
+                  {extractedDetails.isAvailable === false
+                    ? "The requested time is not available. Please select an alternative time:"
+                    : "Please confirm your appointment"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -205,36 +207,67 @@ export function ChatbotPanel({ isOpen, onClose }: ChatbotPanelProps) {
                     {extractedDetails.serviceOffering.facility.name}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Date & Time:</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {new Date(extractedDetails.datetime).toLocaleString()}
-                  </p>
-                </div>
+                {extractedDetails.isAvailable === false &&
+                extractedDetails.alternativeTimes &&
+                extractedDetails.alternativeTimes.length > 0 ? (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Available Alternative Times:</p>
+                    <div className="space-y-2">
+                      {extractedDetails.alternativeTimes.map((alt, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            // Update extractedDetails with selected alternative time
+                            setExtractedDetails({
+                              ...extractedDetails,
+                              datetime: alt.startAt,
+                              isAvailable: true,
+                            });
+                          }}
+                        >
+                          {new Date(alt.startAt).toLocaleString()}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-medium">Date & Time:</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {extractedDetails.datetime
+                        ? new Date(extractedDetails.datetime).toLocaleString()
+                        : "Invalid Date"}
+                    </p>
+                  </div>
+                )}
               </CardContent>
-              <CardFooter className="flex gap-2">
-                <Button
-                  onClick={handleConfirmAppointment}
-                  disabled={isConfirming}
-                  className="flex-1"
-                >
-                  {isConfirming ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Confirming...
-                    </>
-                  ) : (
-                    "Confirm Appointment"
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setExtractedDetails(null)}
-                  disabled={isConfirming}
-                >
-                  Cancel
-                </Button>
-              </CardFooter>
+              {extractedDetails.isAvailable !== false && (
+                <CardFooter className="flex gap-2">
+                  <Button
+                    onClick={handleConfirmAppointment}
+                    disabled={isConfirming}
+                    className="flex-1"
+                  >
+                    {isConfirming ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Confirming...
+                      </>
+                    ) : (
+                      "Confirm Appointment"
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setExtractedDetails(null)}
+                    disabled={isConfirming}
+                  >
+                    Cancel
+                  </Button>
+                </CardFooter>
+              )}
             </Card>
           )}
           <div ref={messagesEndRef} />
