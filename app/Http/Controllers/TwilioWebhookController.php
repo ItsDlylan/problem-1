@@ -475,11 +475,9 @@ final readonly class TwilioWebhookController
                 return response($response->asXML(), 200, ['Content-Type' => 'text/xml']);
             }
 
-            // Continue conversation - convert text response to speech
-            $audioUrl = $this->voiceConversationService->convertTextToSpeech($result['message']);
-
+            // Continue conversation - use Twilio's built-in TTS (more reliable)
             $response = new VoiceResponse();
-            $response->play($audioUrl);
+            $response->say($result['message'], ['voice' => 'alice']);
 
             // Continue gathering input
             $gatherUrl = route('twilio.voice.gather', ['call_sid' => $callSession->call_sid]);
