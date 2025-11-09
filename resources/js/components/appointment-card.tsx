@@ -1,14 +1,14 @@
+import * as React from 'react';
+
 import { Appointment, AppointmentStatus } from '@/types/appointment';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import {
-    AlertTriangle,
     CalendarCheck,
     CalendarClock,
     CalendarOff,
     CalendarX,
-    Clock,    Hospital,
+    Hospital,
     MapPin,
     Stethoscope,
     Users,
@@ -24,41 +24,159 @@ const statusConfig: Record<
     {
         label: string;
         icon: React.ComponentType<{ className?: string }>;
-        color: string;
+        headerClass: string;
+        rippleRgb: string;
     }
 > = {
     upcoming: {
         label: 'Upcoming',
         icon: CalendarClock,
-        color: 'bg-blue-500 hover:bg-blue-600',
+        headerClass:
+            'bg-blue-200 text-blue-900 dark:bg-blue-500/30 dark:text-blue-100',
+        rippleRgb: '59, 130, 246',
     },
     complete: {
         label: 'Complete',
         icon: CalendarCheck,
-        color: 'bg-green-500 hover:bg-green-600',
+        headerClass:
+            'bg-green-200 text-green-900 dark:bg-green-500/30 dark:text-green-100',
+        rippleRgb: '34, 197, 94',
     },
     cancelled: {
         label: 'Cancelled',
         icon: CalendarOff,
-        color: 'bg-yellow-500 hover:bg-yellow-600 text-black',
+        headerClass:
+            'bg-yellow-200 text-yellow-900 dark:bg-yellow-500/30 dark:text-yellow-100',
+        rippleRgb: '234, 179, 8',
     },
     'no show': {
         label: 'No Show',
         icon: CalendarX,
-        color: 'bg-red-500 hover:bg-red-600',
+        headerClass:
+            'bg-red-200 text-red-900 dark:bg-red-500/30 dark:text-red-100',
+        rippleRgb: '239, 68, 68',
     },
 };
 
 export function AppointmentCard({ appointment }: AppointmentCardProps) {
-    const { icon: StatusIcon, label, color } = statusConfig[appointment.status];
+    const { icon: StatusIcon, label, headerClass, rippleRgb } =
+        statusConfig[appointment.status];
+    const statusBarRef = React.useRef<HTMLDivElement>(null);
+    const animationFrameRef = React.useRef<number | null>(null);
+
+    const stopAnimation = React.useCallback(() => {
+        if (animationFrameRef.current !== null) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+    }, []);
+
+    const animateOpacity = React.useCallback(
+        (targetOpacity: number, duration = 350) => {
+            if (!statusBarRef.current) {
+                return;
+            }
+
+            const element = statusBarRef.current;
+            const startingOpacity = parseFloat(
+                element.style.getPropertyValue('--cursor-opacity') || '0',
+            );
+            const difference = targetOpacity - startingOpacity;
+            const startTime = performance.now();
+
+            stopAnimation();
+
+            const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+            const step = (timestamp: number) => {
+                if (!statusBarRef.current) {
+                    animationFrameRef.current = null;
+                    return;
+                }
+
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = easeOutCubic(progress);
+                const nextValue = startingOpacity + difference * eased;
+
+                element.style.setProperty(
+                    '--cursor-opacity',
+                    nextValue.toFixed(3),
+                );
+
+                if (progress < 1) {
+                    animationFrameRef.current = requestAnimationFrame(step);
+                } else {
+                    animationFrameRef.current = null;
+                    if (targetOpacity === 0) {
+                        element.style.setProperty('--cursor-x', '50%');
+                        element.style.setProperty('--cursor-y', '50%');
+                    }
+                }
+            };
+
+            animationFrameRef.current = requestAnimationFrame(step);
+        },
+        [stopAnimation],
+    );
+
+    React.useEffect(
+        () => () => {
+            stopAnimation();
+        },
+        [stopAnimation],
+    );
+
+    const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (!statusBarRef.current) {
+            return;
+        }
+
+        stopAnimation();
+
+        const rect = statusBarRef.current.getBoundingClientRect();
+        const xPercent = ((event.clientX - rect.left) / rect.width) * 100;
+        const yPercent = ((event.clientY - rect.top) / rect.height) * 100;
+
+        statusBarRef.current.style.setProperty('--cursor-x', `${xPercent}%`);
+        statusBarRef.current.style.setProperty('--cursor-y', `${yPercent}%`);
+        statusBarRef.current.style.setProperty('--cursor-opacity', '0.45');
+    };
+
+    const handleMouseLeave = () => {
+        if (!statusBarRef.current) {
+            return;
+        }
+
+        animateOpacity(0);
+    };
+
+    const statusBarStyle = React.useMemo(
+        () =>
+            ({
+                '--cursor-x': '50%',
+                '--cursor-y': '50%',
+                '--cursor-opacity': '0',
+                backgroundImage: `radial-gradient(circle at var(--cursor-x, 50%) var(--cursor-y, 50%), rgba(${rippleRgb}, var(--cursor-opacity, 0.0)) 0%, rgba(${rippleRgb}, 0) 60%)`,
+            }) as React.CSSProperties & {
+                '--cursor-x': string;
+                '--cursor-y': string;
+                '--cursor-opacity': string;
+            },
+        [rippleRgb],
+    );
 
     return (
         <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg">
             <div
+                ref={statusBarRef}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
                 className={cn(
-                    "flex items-center justify-between p-4 text-white",
-                    color,
+                    'relative flex items-center justify-between p-4 transition-colors duration-500 ease-out',
+                    headerClass,
                 )}
+                style={statusBarStyle}
             >
                 <div className="flex items-center">
                     <StatusIcon className="mr-2 h-5 w-5" />
@@ -132,7 +250,9 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
                 {appointment.status === 'upcoming' && (
                     <div className="mt-4 flex justify-end gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
                         <Button variant="outline">Reschedule</Button>
-                        <Button variant="destructive">Cancel</Button>
+                        <Button className="bg-black text-white hover:bg-gray-900 focus-visible:ring-gray-500">
+                            Cancel
+                        </Button>
                     </div>
                 )}
             </CardContent>

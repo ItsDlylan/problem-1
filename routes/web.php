@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\FacilityDashboardController;
 use App\Http\Controllers\FacilityPasswordController;
 use App\Http\Controllers\FacilityProfileController;
 use App\Http\Controllers\FacilityTwoFactorAuthenticationController;
 use App\Http\Controllers\PatientDashboardController;
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserEmailResetNotification;
 use App\Http\Controllers\UserEmailVerification;
@@ -20,9 +22,25 @@ use Inertia\Inertia;
 
 Route::get('/', fn () => Inertia::render('welcome'))->name('home');
 
+// Twilio webhook routes (public but signature-validated)
+// Exclude from CSRF protection since Twilio webhooks don't include CSRF tokens
+Route::prefix('api/twilio')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])
+    ->middleware([\App\Http\Middleware\ValidateTwilioWebhook::class])
+    ->group(function (): void {
+        Route::match(['get', 'post'], 'voice', [TwilioWebhookController::class, 'handleIncomingCall'])->name('twilio.voice');
+        Route::match(['get', 'post'], 'voice/gather/{call_sid}', [TwilioWebhookController::class, 'handleVoiceInput'])->name('twilio.voice.gather');
+        Route::match(['get', 'post'], 'voice/status', [TwilioWebhookController::class, 'handleCallStatus'])->name('twilio.voice.status');
+        Route::match(['get', 'post'], 'voice/reminder', [TwilioWebhookController::class, 'handleReminderCall'])->name('twilio.voice.reminder');
+    });
+
 // Patient Dashboard
 Route::middleware(['auth:patient'])->group(function (): void {
     Route::get('patient/dashboard', [PatientDashboardController::class, 'index'])->name('patient.dashboard');
+    
+    // Chat endpoints
+    Route::post('chat/message', [ChatController::class, 'sendMessage'])->name('chat.message');
+    Route::post('chat/appointment/confirm', [ChatController::class, 'confirmAppointment'])->name('chat.appointment.confirm');
     
     // Patient Settings
     Route::redirect('patient/settings', '/patient/settings/profile');
