@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Models\Patient;
 use App\Services\AppointmentService;
 use App\Services\ChatService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
@@ -80,12 +81,18 @@ final readonly class ChatController
             $cacheKey = "chat_conversation_{$patient->id}";
             Cache::forget($cacheKey);
 
+            // Convert times to America/Chicago timezone for display
+            $startAtChicago = Carbon::parse($appointment->start_at)->setTimezone('America/Chicago');
+            $endAtChicago = Carbon::parse($appointment->end_at)->setTimezone('America/Chicago');
+
             return response()->json([
                 'success' => true,
                 'appointment' => [
                     'id' => $appointment->id,
-                    'startAt' => $appointment->start_at->toIso8601String(),
-                    'endAt' => $appointment->end_at->toIso8601String(),
+                    'startAt' => $startAtChicago->toIso8601String(),
+                    'endAt' => $endAtChicago->toIso8601String(),
+                    'startAtFormatted' => $startAtChicago->format('l, F j, Y \a\t g:i A'),
+                    'endAtFormatted' => $endAtChicago->format('l, F j, Y \a\t g:i A'),
                     'status' => $appointment->status,
                     'service' => [
                         'name' => $appointment->serviceOffering->service->name,
